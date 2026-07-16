@@ -97,6 +97,7 @@ def test_prepare_runtime_script_copies_publish_runtime(tmp_path: Path):
     assert not (out / "AGENTS.md").exists()
     assert not (out / "CLAUDE.md").exists()
     assert "--synthetic" in (out / "README.md").read_text(encoding="utf-8")
+    assert "确定性安全边界" in (out / "README.zh.md").read_text(encoding="utf-8")
     assert not (out / ".gitignore").exists()
     assert not (out / ".playwright-mcp").exists()
     assert not (out / "keep_going.debug").exists()

@@ -1,10 +1,12 @@
 # Keep Going
 
+English | [简体中文](README.zh.md)
+
 **Keep long tasks moving. Escalate when it matters.**
 
 Keep Going is a policy-driven Stop-hook harness for Claude Code and Codex. At each stop, it uses bounded session context and a user-owned decision policy to either inject a low-risk continuation or return control to the human.
 
-![Conceptual comparison of repeated intermediate interruptions and a policy-governed Keep Going run](docs/assets/keep-going-concept.svg)
+![Conceptual sequence: AI works, a human steps in, AI resumes, a human steps in again; Keep Going instead continues AI work across low-risk Stop checks](docs/assets/keep-going-concept.svg)
 
 > Conceptual interaction model — not measured performance. The tracks show normalized task progress, not elapsed time. Keep Going does not claim a specific reduction in interruptions, completion time, or success rate.
 

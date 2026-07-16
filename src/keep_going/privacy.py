@@ -42,11 +42,12 @@ MEDIA_MAGIC = (
     b"\xd0\xcf\x11\xe0\xa1\xb1\x1a\xe1", b"II*\x00", b"MM\x00*",
 )
 REVIEWED_MEDIA_SHA256 = {
-    "docs/assets/keep-going-concept.svg": "d025afc456af3ae58e48d06b9f783544312c089ab4f9f752781609d3bdc7f5d8",
+    "docs/assets/keep-going-concept.svg": "2e76241a2e5221f3b7548b7d7e4bcb01d94efa6866a485c12fe409aeae40caa7",
 }
 REVIEWED_MEDIA_HISTORICAL_SHA256 = {
     "docs/assets/keep-going-concept.svg": {
         "a749b6a1f654b0842dd686846ffe3e18d3b8e0c290910c1dd98744c8e1666188",
+        "d025afc456af3ae58e48d06b9f783544312c089ab4f9f752781609d3bdc7f5d8",
     },
 }
 UNSAFE_SVG_RE = re.compile(

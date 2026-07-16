@@ -11,6 +11,7 @@ const PUBLIC_RUNTIME_FILES = new Set([
   ".codex/agents/keep-going.toml",
   ".codex/skills/keep-going/SKILL.md",
   "README.md",
+  "README.zh.md",
   "artifacts/decision-policy.template.yaml",
   "config.toml",
   "docs/assets/keep-going-concept.svg",
@@ -99,7 +100,7 @@ const SAFE_EMAIL_DOMAINS = new Set([
   "users.noreply.github.com",
 ]);
 const REVIEWED_MEDIA_SHA256 = new Map([
-  ["docs/assets/keep-going-concept.svg", "d025afc456af3ae58e48d06b9f783544312c089ab4f9f752781609d3bdc7f5d8"],
+  ["docs/assets/keep-going-concept.svg", "2e76241a2e5221f3b7548b7d7e4bcb01d94efa6866a485c12fe409aeae40caa7"],
 ]);
 
 function defaultRuntimeHome() {
