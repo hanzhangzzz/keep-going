@@ -1,0 +1,8 @@
+{
+  "name": "keep-going",
+  "version": "0.1.0",
+  "description": "Use Keep Going from Claude Code to answer lightweight Stop hook decisions per project.",
+  "author": {
+    "name": "Keep Going Maintainers"
+  }
+}

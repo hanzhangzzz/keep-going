@@ -1,0 +1,22 @@
+name: privacy-boundary
+
+on:
+  pull_request:
+  push:
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: astral-sh/setup-uv@v6
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: git fetch origin '+refs/pull/*/head:refs/remotes/pull/*'
+      - run: uv run python scripts/privacy-audit.py --history
+      - run: uv run pytest tests/test_privacy_boundary.py tests/test_npm_package.py tests/test_package.py -q
+      - run: npm --prefix packages/npm test
+      - run: cd packages/npm && npm pack --dry-run --json

@@ -1,0 +1,46 @@
+# ===== 数据 / 训练语料 =====
+data/
+
+# ===== 虚拟环境 / 构建产物 =====
+.venv/
+.venv.bak/
+__pycache__/
+*.pyc
+.pytest_cache/
+.ruff_cache/
+*.egg-info/
+dist/
+build/
+
+# ===== 本机 session / 调试产物（高敏感，绝不 push） =====
+claude.log
+*.debug
+.omx/
+.playwright-mcp/
+.tmp/
+*.tmp
+*.bak
+
+# ===== 凭据 / 本地配置 =====
+.env
+.env.*
+!.env.example
+.claude/settings.local.json
+
+# ===== 平台垃圾 =====
+.DS_Store
+Thumbs.db
+
+# ===== 项目运行态（prepack 临时产物 / 安装期产物） =====
+packages/npm/runtime/
+plugins/keep-going/runtime-root
+plugins/keep-going/.repo-root
+plugins/keep-going/.mcp_runtime/
+artifacts/decision-policy.yaml
+artifacts/decision-policy.runtime.yaml
+artifacts/decision-policy.candidate*.yaml
+artifacts/keep-going-package/
+
+# ===== 工具缓存 / 误存的会话日志（含真实路径与邮箱，禁止入库） =====
+.serena/
+save.txt

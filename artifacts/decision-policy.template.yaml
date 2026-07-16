@@ -1,0 +1,110 @@
+# Public, non-personal baseline. Copy this file to the Git-ignored
+# decision-policy.yaml, review it, then run `keep-going compile-policy`.
+
+version: 0.1
+generated_at: ""
+window:
+  days: 90
+
+core_principles:
+  - id: safety-boundary
+    statement: Sensitive, irreversible, or fact-dependent decisions require a human.
+  - id: evidence-before-completion
+    statement: Claims of completion require relevant verification evidence.
+  - id: scope-fidelity
+    statement: Continue only within the explicit task and authorization boundary.
+
+current_state_gates:
+  - id: human-only-authorization
+    gate: Authorization and information requests must escalate to the human.
+
+preferences: {}
+
+heuristics: []
+
+stop_decision:
+  version: 1
+  rules:
+    - id: empty-stop-event
+      category: other
+      action: allow
+      reply: ""
+      reason: stop_event_without_assistant_message
+      confidence: 0.9
+      when:
+        message_empty: true
+    - id: sensitive-action-needs-human
+      category: authorization
+      action: escalate
+      reply: ""
+      reason: sensitive_action_needs_human
+      confidence: 0.95
+      terms:
+        - commit
+        - push
+        - delete
+        - production
+        - secret
+        - token
+        - payment
+        - 提交
+        - 推送
+        - 删除
+        - 生产
+        - 密钥
+        - 付款
+    - id: verify-before-completion
+      category: verification
+      action: block
+      reply: Run the relevant verification, report the command and result, then reassess completion.
+      reason: verification_required_before_completion
+      confidence: 0.8
+      terms:
+        - completed
+        - fixed
+        - done
+        - 完成
+        - 修复
+        - 做完
+    - id: low-risk-continuation
+      category: preference
+      action: block
+      reply: Continue within the agreed scope, keep the change minimal, and verify the final artifact.
+      reason: low_risk_continuation
+      confidence: 0.75
+      terms:
+        - continue
+        - proceed
+        - next step
+        - 继续
+        - 下一步
+        - 要不要
+        - 是否
+    - id: no-decision-needed
+      category: other
+      action: allow
+      reply: ""
+      reason: no_low_risk_decision_detected
+      confidence: 0.7
+
+vocabulary:
+  idioms: []
+  style_words:
+    - concise
+    - outcome-first
+
+strategic_frame: {}
+
+ai_collaboration_modes: []
+
+redlines:
+  - id: no-secret-disclosure
+    rule: Never disclose credentials, private session data, or personal content.
+  - id: no-fake-completion
+    rule: Never claim completion without verification evidence.
+
+gaps: []
+
+changelog:
+  - version: 0.1
+    change: Public non-personal baseline policy.

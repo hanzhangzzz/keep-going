@@ -1,0 +1,21 @@
+{
+  "name": "keep-going-local",
+  "owner": {
+    "name": "Keep Going Maintainers"
+  },
+  "metadata": {
+    "description": "Local Keep Going plugin marketplace for Claude Code.",
+    "version": "0.1.0"
+  },
+  "plugins": [
+    {
+      "name": "keep-going",
+      "description": "Project-level Keep Going Stop hook that can answer lightweight agent questions using the user's decision policy.",
+      "version": "0.1.0",
+      "author": {
+        "name": "Keep Going Maintainers"
+      },
+      "source": "./plugins/keep-going"
+    }
+  ]
+}

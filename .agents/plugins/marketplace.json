@@ -1,0 +1,20 @@
+{
+  "name": "keep-going-local",
+  "interface": {
+    "displayName": "Keep Going Local"
+  },
+  "plugins": [
+    {
+      "name": "keep-going",
+      "source": {
+        "source": "local",
+        "path": "./plugins/keep-going"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Productivity"
+    }
+  ]
+}

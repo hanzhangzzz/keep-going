@@ -1,0 +1,45 @@
+{
+  "hooks": {
+    "keep-going-decision": {
+      "description": "Ask Keep Going for a lightweight decision from hook stdin JSON.",
+      "command": "./hooks/keep-going-decision-hook.sh",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "question": {
+            "type": "string"
+          },
+          "project": {
+            "type": "string"
+          },
+          "recent_context": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "question"
+        ],
+        "additionalProperties": true
+      }
+    },
+    "keep-going-stop": {
+      "description": "Project-level Stop hook bridge. It no-ops unless `keep-going bridge enable --project <cwd>` has enabled the project.",
+      "command": "./hooks/keep-going-stop-hook.sh",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "cwd": {
+            "type": "string"
+          },
+          "last_assistant_message": {
+            "type": "string"
+          },
+          "session_id": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": true
+      }
+    }
+  }
+}

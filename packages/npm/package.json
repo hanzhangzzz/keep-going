@@ -1,0 +1,34 @@
+{
+  "name": "keep-going",
+  "version": "0.1.0",
+  "description": "Stop-hook harness for Claude Code and Codex",
+  "license": "UNLICENSED",
+  "type": "commonjs",
+  "bin": {
+    "keep-going": "bin/keep-going.js"
+  },
+  "files": [
+    "bin/",
+    "lib/",
+    "scripts/",
+    "runtime/",
+    "README.md"
+  ],
+  "scripts": {
+    "prepack": "node scripts/prepare-runtime.js",
+    "test": "node --check bin/keep-going.js && node --check lib/runtime.js && node --check scripts/prepare-runtime.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "keywords": [
+    "stop-hook",
+    "codex",
+    "claude-code",
+    "agent",
+    "npx"
+  ]
+}

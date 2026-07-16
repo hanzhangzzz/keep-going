@@ -1,0 +1,38 @@
+{
+  "name": "keep-going",
+  "version": "0.1.0",
+  "description": "Local Keep Going plugin: reply, eval, MCP, and project-level Stop hook access to the user's decision policy.",
+  "author": {
+    "name": "Keep Going Maintainers"
+  },
+  "license": "UNLICENSED",
+  "keywords": [
+    "keep-going",
+    "decision-agent",
+    "mcp",
+    "skill"
+  ],
+  "skills": "./skills/",
+  "commands": "./commands/",
+  "hooks": "./hooks.json",
+  "mcpServers": "./.mcp.json",
+  "interface": {
+    "displayName": "Keep Going",
+    "shortDescription": "Apply the user's decision policy to lightweight execution choices.",
+    "longDescription": "Provides Keep Going's local Stop-hook harness, persisted decision policy, confidence gates, evaluation surfaces, skill wrappers, and MCP tools.",
+    "developerName": "Keep Going Maintainers",
+    "category": "Productivity",
+    "capabilities": [
+      "Interactive",
+      "Local",
+      "MCP",
+      "Hooks"
+    ],
+    "defaultPrompt": [
+      "Ask Keep Going whether to continue.",
+      "Use Keep Going to choose between options.",
+      "Run Keep Going eval on recent held-out turns."
+    ],
+    "brandColor": "#635BFF"
+  }
+}

@@ -1,0 +1,40 @@
+# Keep Going 配置
+
+[window]
+# 时间窗：从今天起回看 N 天的对话
+days = 90
+
+[sources]
+claude_code_dir = "~/.claude/projects"
+codex_archived_dir = "~/.codex/archived_sessions"
+codex_sessions_dir = "~/.codex/sessions"
+codex_history = "~/.codex/history.jsonl"
+
+[paths]
+data_dir = "./data"
+artifacts_dir = "./artifacts"
+
+[scrub]
+enabled = true
+user_replacement = "USER"
+
+[models]
+# 推演（why 抽取）：跑量用 Haiku
+reasoning = "claude-haiku-4-5-20251001"
+# 难例 / Eval：Sonnet
+eval = "claude-sonnet-4-6"
+# Keep Going 本体回答：Sonnet
+decision = "claude-sonnet-4-6"
+
+[reasoning]
+# 单 turn 输入截断（字符）
+max_content_chars = 4000
+max_prev_assistant_chars = 2000
+# 并发
+concurrency = 4
+
+[filters]
+# 跳过过短 / 只包含 slash 命令的用户 turn
+min_user_chars = 4
+# 跳过纯系统 message (command-name 包裹)
+skip_command_only = true

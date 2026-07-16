@@ -1,0 +1,9 @@
+{
+  "mcpServers": {
+    "keep-going": {
+      "command": "./scripts/mcp.sh",
+      "cwd": ".",
+      "startup_timeout_sec": 60
+    }
+  }
+}
