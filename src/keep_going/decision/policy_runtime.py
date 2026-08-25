@@ -13,6 +13,7 @@ import yaml
 RUNTIME_SCHEMA_VERSION = 1
 RUNTIME_TOP_LEVEL_FIELDS = (
     "version",
+    "profile_summary",
     "core_principles",
     "current_state_gates",
     "preferences",

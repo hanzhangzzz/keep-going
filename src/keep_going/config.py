@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 import tomllib
 from dataclasses import dataclass
 from pathlib import Path
@@ -76,6 +77,8 @@ def load_config(path: Path | None = None) -> Config:
     cfg_path = path or (root / "config.toml")
     with cfg_path.open("rb") as f:
         raw = tomllib.load(f)
+    user_home_raw = os.environ.get("KEEP_GOING_USER_HOME", "").strip()
+    user_home = Path(user_home_raw).expanduser().resolve() if user_home_raw else None
     return Config(
         window=WindowCfg(**raw["window"]),
         sources=SourcesCfg(
@@ -89,8 +92,10 @@ def load_config(path: Path | None = None) -> Config:
             ),
         ),
         paths=PathsCfg(
-            data_dir=_expand(raw["paths"]["data_dir"], root),
-            artifacts_dir=_expand(raw["paths"]["artifacts_dir"], root),
+            data_dir=user_home / "data" if user_home else _expand(raw["paths"]["data_dir"], root),
+            artifacts_dir=(
+                user_home / "artifacts" if user_home else _expand(raw["paths"]["artifacts_dir"], root)
+            ),
         ),
         scrub=ScrubCfg(**raw["scrub"]),
         models=ModelsCfg(**raw["models"]),

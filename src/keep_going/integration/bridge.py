@@ -403,8 +403,8 @@ def _resolve_agent_policy(agent_name: str, project_path: Path, cfg: Config) -> P
     if agent_name == "default":
         return runtime_policy_path(cfg.paths.artifacts_dir / "decision-policy.yaml")
     resolved = resolve_agent(agent_name, project=str(project_path))
-    if resolved.get("valid") and resolved.get("policy_path"):
-        return Path(resolved["policy_path"])
+    if resolved.get("valid") and resolved.get("path"):
+        return Path(resolved["path"])
     return runtime_policy_path(cfg.paths.artifacts_dir / "decision-policy.yaml")
 
 

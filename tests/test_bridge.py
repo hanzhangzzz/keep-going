@@ -823,12 +823,13 @@ def test_cli_backend_prompt_contains_stop_decision_policy(tmp_path: Path):
         "'evidence':[{'source':'prompt','id':'has-policy','has_stop_decision':'stop_decision' in prompt,"
         "'has_rule':'stop-lightweight-decision' in prompt,"
         "'has_runtime_schema':'runtime_schema_version' in prompt,"
+        "'has_allow_invariant':'allow 只在任务可安全结束时使用' in prompt,"
         "'has_provenance':'derived_from' in prompt}]}, ensure_ascii=False))"
     )
 
     result = decide_stop(
         cfg,
-        {"cwd": str(tmp_path), "last_assistant_message": "要不要继续？"},
+        {"cwd": str(tmp_path), "last_assistant_message": "请综合评估当前上下文。"},
         project_path=tmp_path,
         backend="cli",
         command=f"{shlex.quote(sys.executable)} -c {shlex.quote(script)}",
@@ -838,7 +839,35 @@ def test_cli_backend_prompt_contains_stop_decision_policy(tmp_path: Path):
     assert evidence["has_stop_decision"] is True
     assert evidence["has_rule"] is True
     assert evidence["has_runtime_schema"] is True
+    assert evidence["has_allow_invariant"] is True
     assert evidence["has_provenance"] is False
+
+
+def test_cli_backend_uses_explicit_policy_rule_before_model_command(tmp_path: Path):
+    from keep_going.decision.stop_decision import decide_stop
+
+    cfg = _config(tmp_path)
+    _write_fixture(cfg)
+    source = cfg.paths.artifacts_dir / "decision-policy.yaml"
+    policy = yaml.safe_load(source.read_text(encoding="utf-8"))
+    lightweight = next(
+        rule for rule in policy["stop_decision"]["rules"] if rule["id"] == "stop-lightweight-decision"
+    )
+    lightweight["category"] = "preference"
+    source.write_text(yaml.safe_dump(policy, allow_unicode=True), encoding="utf-8")
+    compile_runtime_policy(source)
+
+    result = decide_stop(
+        cfg,
+        {"cwd": str(tmp_path), "last_assistant_message": "我已经完成修改。要不要继续做最终验证？"},
+        project_path=tmp_path,
+        backend="cli",
+        command="/path/that/must/not/run",
+    )
+
+    assert result["action"] == "block"
+    assert result["reason"] == "stop_lightweight_decision"
+    assert result["evidence"][0]["kind"] == "stop_decision_rule"
 
 
 def test_cli_backend_prompt_uses_bounded_decision_context_and_minimal_raw_event(tmp_path: Path):

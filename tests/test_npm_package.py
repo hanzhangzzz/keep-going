@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import os
 import shlex
+import shutil
 import subprocess
 import sys
 from pathlib import Path
@@ -57,6 +58,7 @@ def test_npm_wrapper_help_and_syntax_check():
     )
 
     assert "npx keep-going install" in help_result.stdout
+    assert "npx keep-going onboard" in help_result.stdout
     assert "npx keep-going start" in help_result.stdout
     assert "npx keep-going sync-local" in help_result.stdout
     assert "--register-hosts <mode>" in help_result.stdout
@@ -78,8 +80,10 @@ def test_prepare_runtime_script_copies_publish_runtime(tmp_path: Path):
     assert "prepared Keep Going runtime" in result.stdout
     assert (out / "pyproject.toml").exists()
     assert (out / "src" / "keep_going" / "cli.py").exists()
+    assert (out / "src" / "keep_going" / "onboarding.py").exists()
     assert (out / "plugins" / "keep-going" / ".codex-plugin" / "plugin.json").exists()
     assert (out / "plugins" / "keep-going" / "plugin.json").exists()
+    assert (out / "plugins" / "keep-going" / "scripts" / "onboard.sh").exists()
     assert not (out / "plugins" / "keep-going" / "runtime-root").exists()
     assert not (out / "plugins" / "keep-going" / ".repo-root").exists()
     assert (out / "artifacts" / "decision-policy.template.yaml").read_bytes() == (
@@ -382,6 +386,102 @@ def test_npm_wrapper_start_to_temp_homes(tmp_path: Path):
     state = json.loads(state_files[0].read_text(encoding="utf-8"))
     assert state["enabled"] is True
     assert state["host"] == "codex"
+
+
+def test_npm_start_and_onboard_preserve_existing_personal_policy(tmp_path: Path):
+    package_root = tmp_path / "package"
+    shutil.copytree(NPM_ROOT, package_root, ignore=shutil.ignore_patterns("runtime"))
+    bundled = package_root / "runtime"
+    subprocess.run(
+        ["node", str(NPM_ROOT / "scripts" / "prepare-runtime.js"), "--out", str(bundled)],
+        cwd=ROOT,
+        check=True,
+        text=True,
+        capture_output=True,
+    )
+    runtime_home = tmp_path / "runtime-home"
+    runtime = runtime_home / "0.1.0"
+    script = (
+        "const {copyRuntimeSource}=require(process.argv[1]);"
+        "copyRuntimeSource(process.argv[2],process.argv[3],{replace:true});"
+    )
+    subprocess.run(
+        ["node", "-e", script, str(package_root / "lib" / "runtime.js"), str(bundled), str(runtime)],
+        cwd=ROOT,
+        check=True,
+    )
+    source_policy = ROOT / "artifacts" / "decision-policy.yaml"
+    runtime_policy = ROOT / "artifacts" / "decision-policy.runtime.yaml"
+    shutil.copy2(source_policy, runtime / "artifacts" / source_policy.name)
+    shutil.copy2(runtime_policy, runtime / "artifacts" / runtime_policy.name)
+    before = source_policy.read_bytes()
+    project = tmp_path / "project"
+    project.mkdir()
+    common = [
+        "--runtime-home",
+        str(runtime_home),
+        "--project",
+        str(project),
+        "--codex-home",
+        str(tmp_path / "codex-home"),
+        "--agents-home",
+        str(tmp_path / "agents-home"),
+        "--claude-home",
+        str(tmp_path / "claude-home"),
+        "--state-home",
+        str(tmp_path / "state-home"),
+        "--no-register-hosts",
+    ]
+
+    subprocess.run(
+        ["node", str(package_root / "bin" / "keep-going.js"), "start", *common],
+        cwd=ROOT,
+        check=True,
+        text=True,
+        capture_output=True,
+        env={**os.environ, "KEEP_GOING_CODEX_CLI_COMMAND": _decision_command()},
+    )
+    stable_artifacts = runtime_home / "user" / "artifacts"
+    assert (stable_artifacts / "decision-policy.yaml").read_bytes() == before
+    assert (stable_artifacts / "decision-policy.runtime.yaml").read_bytes() == runtime_policy.read_bytes()
+    subprocess.run(
+        [
+            "node",
+            str(package_root / "bin" / "keep-going.js"),
+            "upgrade",
+            "--runtime-home",
+            str(runtime_home),
+            "--codex-home",
+            str(tmp_path / "codex-home"),
+            "--agents-home",
+            str(tmp_path / "agents-home"),
+            "--claude-home",
+            str(tmp_path / "claude-home"),
+            "--no-register-hosts",
+        ],
+        cwd=ROOT,
+        check=True,
+        text=True,
+        capture_output=True,
+    )
+    onboard = subprocess.run(
+        [
+            "node",
+            str(package_root / "bin" / "keep-going.js"),
+            "onboard",
+            *common,
+            "--no-deploy",
+        ],
+        cwd=ROOT,
+        text=True,
+        capture_output=True,
+        env={**os.environ, "KEEP_GOING_DISTILL_COMMAND": "command-that-must-not-run"},
+    )
+
+    assert (stable_artifacts / "decision-policy.yaml").read_bytes() == before
+    assert (stable_artifacts / "decision-policy.runtime.yaml").read_bytes() == runtime_policy.read_bytes()
+    assert onboard.returncode != 0
+    assert "personal DNA already exists" in onboard.stderr
 
 
 def test_npm_wrapper_sync_local_to_temp_homes(tmp_path: Path):

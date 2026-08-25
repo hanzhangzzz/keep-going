@@ -77,7 +77,7 @@ def _is_envelope_noise(text: str) -> bool:
     return False
 
 
-def _filter(turn: Turn, cfg: Config) -> bool:
+def should_keep_turn(turn: Turn, cfg: Config) -> bool:
     if turn.role == "user":
         if len(turn.content) < cfg.filters.min_user_chars:
             return False
@@ -140,7 +140,7 @@ def harvest(cfg: Config, *, window_days: int | None = None, limit: int | None = 
             if turn.ts < since:
                 counters["filtered"] += 1
                 continue
-            if not _filter(turn, cfg):
+            if not should_keep_turn(turn, cfg):
                 counters["filtered"] += 1
                 continue
             if turn.role == "user" and len(turn.content) >= _DEDUP_MIN_CHARS:

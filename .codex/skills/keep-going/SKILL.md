@@ -1,13 +1,13 @@
 ---
 name: keep-going
-description: 调用本仓库的 Keep Going 做轻量决策；也可通过“开启/关闭/查询/自检/start/enable/disable/status/self-test”管理当前项目 Stop hook。
+description: 一键蒸馏并部署个人 DNA，调用 Keep Going 做轻量决策，或管理当前项目 Stop hook。
 ---
 
 # Keep Going Skill
 
 任务 Agent 卡在「要不要继续、选哪个方案、是否完成、是否提交」这类轻量判断时，调用本 skill。
 
-当用户通过 `$keep-going` 请求“开启、关闭、查询、状态、自检、start、enable、disable、status、self-test”时，不要把它当成要询问 Keep Going 的问题；直接执行下面的项目级控制命令。
+当用户通过 `$keep-going` 请求“蒸馏我的 DNA、初始化、onboard、开启、关闭、查询、状态、自检”时，不要把它当成要询问 Keep Going 的问题；直接执行对应控制命令。
 
 ## 执行总流程
 
@@ -19,6 +19,8 @@ description: 调用本仓库的 Keep Going 做轻量决策；也可通过“开�
    ```
 
 2. 判断用户意图：
+   - 命中 `$keep-going 蒸馏我的 DNA/初始化/onboard`：执行 `plugins/keep-going/scripts/onboard.sh --project "$TASK_PROJECT" --host codex`；当前宿主是 Claude Code 时改用 `--host claude-code`。
+   - 命中 `$keep-going 重新蒸馏/refresh DNA`：在上一条命令追加 `--replace`，并先提醒会替换现有本地 canonical。
    - 命中 `$keep-going 开启/关闭/查询/状态/自检/start/enable/disable/status/self-test`：进入“项目级控制入口”。
    - 否则如果是在问任务 Agent 的轻量决策问题：进入“普通 Keep Going 询问入口”。
    - 否则停止使用本 skill，并按用户原任务继续。
@@ -187,29 +189,26 @@ printf '{"question":"<AI 的问题>","project":"%s","agent":"qa-reviewer"}' "$TA
 - 不要在用户未明确授权时追加 `--generate` 或发送敏感上下文给外部 API。
 - 不要在 Stop hook probe 中写入真实 metrics，除非用户正在验证真实运行态。
 
-## Distill your own agent [experimental]
+## 一键蒸馏并部署你的个人 DNA
 
-One-click distillation: harvest → classify → deterministic decision policy for a named agent.
+默认只从当前宿主最近 5 个本地 session 中选择最多 40 条高信号决策，经脱敏后交给同一已认证宿主 CLI 蒸馏；随后确定性编译 runtime、安装调用面、绑定当前项目并运行自检。
 
 ```bash
-uv run keep-going distill-mine --name <agent-name>
-uv run keep-going distill-mine --name <agent-name> --project /path/to/project
+plugins/keep-going/scripts/onboard.sh --project "$TASK_PROJECT" --host codex
 ```
 
 **隐私边界（hard requirement）：**
 
-1. 本地 session 只读 — harvest 只读 `~/.claude` 和 `~/.codex`，不写源目录。
-2. 模板 / canonical policy 不被触碰。
-3. 全流程本地处理，不调 Anthropic API。
-4. 产物写到 `~/.keep-going/agents/<name>/policy-<ts>.yaml`，不进 git 跟踪路径。
-5. 无 telemetry、无上传。
+1. 原始 session 只读；只读取当前宿主自己的 session，并把脱敏、有界的决策样本发送给同一宿主 CLI。
+2. canonical、runtime 和证据包只保存在本机私有、Git ignored 路径。
+3. 公开 baseline 的授权、隐私和不可逆操作门必须强制合并，模型不能删除。
+4. 现有个人 DNA 默认拒绝覆盖；明确重新蒸馏才追加 `--replace`。
 
 **约束：**
 
-- agent 名称必须通过 `validate_agent_name`（`default` 等保留名被拒）。
-- 语料不足 10 条 user turn 时抛 `InsufficientCorpusError`。
-- 产物是 `status: candidate` 的 YAML，不自动覆盖 canonical policy。
-- 连续运行产生带历史记录的多个 decision policy 文件（meta.json.history 追加）。
+- 少于 3 条决策时显式失败并给出扩大时间窗的恢复方法。
+- 完成后必须报告 profile、样本数量、产物路径、部署/自检状态和立即体验方法。
+- 命名专家 agent 仍可用 `keep-going distill-mine --name <agent-name>`，不替代默认 personal DNA onboarding。
 
 ## 边界
 

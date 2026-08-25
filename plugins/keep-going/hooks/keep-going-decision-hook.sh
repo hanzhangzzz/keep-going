@@ -20,5 +20,8 @@ if [[ ! -f "$repo_root/pyproject.toml" || ! -d "$repo_root/src/keep_going" ]]; t
   echo "Keep Going repo root is invalid: $repo_root" >&2
   exit 1
 fi
+if [[ -z "${KEEP_GOING_USER_HOME:-}" && -f "$script_dir/../user-home" ]]; then
+  export KEEP_GOING_USER_HOME="$(cat "$script_dir/../user-home")"
+fi
 cd "$repo_root"
 exec uv run keep-going hook --input-json

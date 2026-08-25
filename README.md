@@ -10,6 +10,29 @@ Keep Going is a policy-driven Stop-hook harness for Claude Code and Codex. At ea
 
 > Conceptual interaction model — not measured performance. The tracks show normalized task progress, not elapsed time. Keep Going does not claim a specific reduction in interruptions, completion time, or success rate.
 
+## Get your personal DNA in one command
+
+Requirements: Node.js 18+ for `npx`, Python 3.11+, [`uv`](https://docs.astral.sh/uv/), and an authenticated Claude Code or Codex CLI. The npm wrapper uses `uv` to run the bundled Python runtime.
+
+From a cloned repository:
+
+```bash
+uv sync
+uv run keep-going onboard --project "$PWD" --host auto
+```
+
+Or from the packaged CLI:
+
+```bash
+npx keep-going onboard --project "$PWD" --host auto
+```
+
+That single command selects a bounded sample from the chosen host's recent sessions, scrubs it, distills recurring decision preferences through your authenticated host CLI, persists a reviewable canonical policy and compiled runtime in a version-independent local user directory, installs the local integration, enables the current project, and runs a Stop-hook self-test.
+
+The final output shows your profile summary, the number of sessions and decisions used, every local artifact path, deployment status, and a first question to try. Run `$keep-going status` or `npx keep-going status --project "$PWD"` later to see which policy is active.
+
+Only the selected scrubbed sample from the chosen host is sent to that authenticated backend; sessions from the other host are not read. Raw session files remain read-only and local. Existing personal DNA is never overwritten unless you explicitly rerun with `--replace`.
+
 ## What Keep Going does
 
 Keep Going sits at the host's Stop hook. It does not own the agent's planner, task state, checkpointing, permissions, or definition of done.
@@ -57,16 +80,13 @@ Policies, events, and compiled runtime artifacts are persisted locally for revie
 
 The runtime policy is a persisted, deterministic compilation of the local canonical policy. A missing, stale, or manually changed runtime fails explicitly; Keep Going does not silently project or fall back.
 
-## Quick start from source
+## Manual setup and advanced controls
 
 Requirements: Python 3.11+, [`uv`](https://docs.astral.sh/uv/), and an authenticated Claude Code or Codex CLI for model-backed Stop decisions.
 
 ```bash
 uv sync
-cp artifacts/decision-policy.template.yaml artifacts/decision-policy.yaml
-# Review and personalize the conservative local policy before compiling it.
-uv run keep-going compile-policy
-uv run keep-going bridge self-test --project "$PWD" --json-output
+uv run keep-going onboard --project "$PWD" --host auto
 ```
 
 Install or refresh the host integration, enable the project Stop hook, and verify the loaded surface:
@@ -79,7 +99,7 @@ uv run keep-going bridge self-test --project "$PWD" --json-output
 
 `keep-going start` writes user-level agent, plugin, marketplace, native-hook integration, and project state. In this source workflow, the checkout remains the active runtime. Review the installation plan with `uv run keep-going install` first if you do not want those user-level writes yet.
 
-The source workflow can optionally harvest and distill local conversations:
+For deterministic baseline experiments or manual policy development, the lower-level workflow remains available:
 
 ```bash
 uv run keep-going harvest --window-days 90
@@ -106,6 +126,7 @@ The privacy audit rejects private policy artifacts, session/log formats, real us
 ## Integration surfaces
 
 - `keep-going bridge`: project-level Stop-hook activation and self-test
+- `keep-going onboard`: bounded session distillation, persisted personal DNA, local deployment, and verification
 - `keep-going reply`: direct decision-policy reply
 - `keep-going hook`: host-neutral hook policy entrypoint
 - `keep-going mcp`: MCP stdio server

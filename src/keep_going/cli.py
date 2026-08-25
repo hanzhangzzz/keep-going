@@ -2,9 +2,10 @@
 
 from __future__ import annotations
 
-import json
 import hashlib
+import json
 import os
+import shutil
 import subprocess
 import sys
 from datetime import datetime, timezone
@@ -25,7 +26,7 @@ from .agents.registry import (
     validate_agent_name,
 )
 from .audit import render_audit_markdown, run_audit
-from .config import load_config
+from .config import Config, load_config
 from .corpus.classify import classify_all as _classify
 from .corpus.harvest import harvest as _harvest
 from .corpus.sample import sample as _sample
@@ -52,6 +53,7 @@ from .integration.install import (
 )
 from .integration.package import package_keep_going
 from .mcp_stdio import run_stdio_server
+from .onboarding import onboard_personal_dna
 from .patterns.distill import distill_candidate as _distill_candidate
 from .reasoning.extract import reason as _reason
 from .decision.policy_runtime import compile_runtime_policy, load_runtime_policy, runtime_policy_path
@@ -314,7 +316,7 @@ def sync_local(
 
 
 @main.command()
-@click.option("--project", type=click.Path(file_okay=False), default=".", show_default=True)
+@click.option("--project", type=click.Path(exists=True, file_okay=False), default=".", show_default=True)
 @click.option("--host", type=click.Choice(["claude-code", "codex", "generic"]), default="codex", show_default=True)
 @click.option("--backend", type=click.Choice(["cli"]), default=DEFAULT_BACKEND, show_default=True)
 @click.option("--command", type=str, default=None, help='local CLI or alias command, e.g. "c 0" or "omxm"; implies --backend cli')
@@ -358,29 +360,10 @@ def start(
 ) -> None:
     """Install/refresh Keep Going, enable it for a project, and verify Stop hook readiness."""
     cfg = load_config()
-    codex_path = Path(codex_home) if codex_home else None
-    agents_path = Path(agents_home) if agents_home else None
-    claude_path = Path(claude_home) if claude_home else None
-    state_path = Path(state_home) if state_home else None
-    agent_list = [a.strip() for a in agents.split(",") if a.strip()] if agents else None
     try:
-        output = run_installer(
-            cfg,
-            codex_home=codex_path,
-            agents_home=agents_path,
-            claude_home=claude_path,
-            execute=True,
-            force=True,
-            register_hosts=register_hosts,
-        )
-        click.echo(output, nl=False)
-        if not no_verify:
-            report = verify_installation(codex_home=codex_path, agents_home=agents_path, claude_home=claude_path)
-            click.echo(render_install_verification(report), nl=False)
-            if not report["ok"]:
-                raise click.ClickException("Keep Going integration is not fully installed")
-        state = enable_project(
-            Path(project),
+        result = _start_project(
+            cfg=cfg,
+            project=project,
             host=host,
             backend=backend,
             command=command,
@@ -388,20 +371,242 @@ def start(
             input_mode=input_mode,
             force_skill=force_skill,
             shell_executable=shell_executable,
-            state_home=state_path,
-            agents=agent_list,
+            state_home=state_home,
+            agents=agents,
             render_mode=render_mode,
+            register_hosts=register_hosts,
+            codex_home=codex_home,
+            agents_home=agents_home,
+            claude_home=claude_home,
+            no_verify=no_verify,
         )
-        _register_agent_tomls(agent_list, cfg, codex_path, project)
-        _emit_bridge_state(state, json_output=json_output)
-        if not no_verify:
-            self_test = run_self_test(cfg, project=Path(project), host=host)
-            click.echo(f"Keep Going bridge self-test: {'PASS' if self_test['passed'] else 'FAIL'}")
-            if not self_test["passed"]:
-                raise click.ClickException("Keep Going bridge self-test failed")
+        if json_output:
+            click.echo(json.dumps(result["state"], ensure_ascii=False, indent=2))
+            return
+        click.echo(result["installer_output"], nl=False)
+        if result["install_report"] is not None:
+            click.echo(render_install_verification(result["install_report"]), nl=False)
+        _emit_bridge_state(result["state"], json_output=False)
+        if result["self_test"] is not None:
+            click.echo(f"Keep Going bridge self-test: {'PASS' if result['self_test']['passed'] else 'FAIL'}")
             click.echo("Keep Going start verified.")
     except (FileNotFoundError, RuntimeError, ValueError) as exc:
         raise click.ClickException(str(exc)) from exc
+
+
+def _start_project(
+    *,
+    cfg: Config,
+    project: str,
+    host: str,
+    backend: str,
+    command: str | None,
+    shell: bool,
+    input_mode: str,
+    force_skill: str,
+    shell_executable: str | None,
+    state_home: str | None,
+    agents: str | None,
+    render_mode: str,
+    register_hosts: str,
+    codex_home: str | None,
+    agents_home: str | None,
+    claude_home: str | None,
+    no_verify: bool,
+) -> dict[str, object]:
+    codex_path = Path(codex_home) if codex_home else None
+    agents_path = Path(agents_home) if agents_home else None
+    claude_path = Path(claude_home) if claude_home else None
+    state_path = Path(state_home) if state_home else None
+    agent_list = [a.strip() for a in agents.split(",") if a.strip()] if agents else None
+    output = run_installer(
+        cfg,
+        codex_home=codex_path,
+        agents_home=agents_path,
+        claude_home=claude_path,
+        execute=True,
+        force=True,
+        register_hosts=register_hosts,
+    )
+    report = None if no_verify else verify_installation(
+        codex_home=codex_path, agents_home=agents_path, claude_home=claude_path
+    )
+    if report is not None and not report["ok"]:
+        raise RuntimeError("Keep Going integration is not fully installed")
+    state = enable_project(
+        Path(project),
+        host=host,
+        backend=backend,
+        command=command,
+        shell=shell,
+        input_mode=input_mode,
+        force_skill=force_skill,
+        shell_executable=shell_executable,
+        state_home=state_path,
+        agents=agent_list,
+        render_mode=render_mode,
+    )
+    _register_agent_tomls(agent_list, cfg, codex_path, project)
+    self_test = None if no_verify else run_self_test(cfg, project=Path(project), host=host)
+    if self_test is not None and not self_test["passed"]:
+        raise RuntimeError("Keep Going bridge self-test failed")
+    return {
+        "installer_output": output,
+        "install_report": report,
+        "state": state,
+        "self_test": self_test,
+    }
+
+
+@main.command()
+@click.option("--project", type=click.Path(exists=True, file_okay=False), default=".", show_default=True)
+@click.option("--host", type=click.Choice(["auto", "claude-code", "codex"]), default="auto", show_default=True)
+@click.option("--max-sessions", type=click.IntRange(min=1), default=5, show_default=True)
+@click.option("--max-turns", type=click.IntRange(min=3), default=40, show_default=True)
+@click.option("--window-days", type=click.IntRange(min=1), default=None)
+@click.option("--scope", type=click.Choice(["recent", "project"]), default="recent", show_default=True)
+@click.option("--replace", is_flag=True, help="replace an existing private personal DNA after review")
+@click.option("--deploy/--no-deploy", default=True, show_default=True)
+@click.option(
+    "--register-hosts",
+    type=click.Choice(HOST_PLUGIN_CHOICES),
+    default="auto",
+    show_default=True,
+)
+@click.option("--state-home", type=click.Path(file_okay=False), default=None)
+@click.option("--codex-home", type=click.Path(file_okay=False), default=None)
+@click.option("--agents-home", type=click.Path(file_okay=False), default=None)
+@click.option("--claude-home", type=click.Path(file_okay=False), default=None)
+@click.option("--no-verify", is_flag=True, help="skip install verification and bridge self-test")
+@click.option("--json-output", is_flag=True)
+def onboard(
+    project: str,
+    host: str,
+    max_sessions: int,
+    max_turns: int,
+    window_days: int | None,
+    scope: str,
+    replace: bool,
+    deploy: bool,
+    register_hosts: str,
+    state_home: str | None,
+    codex_home: str | None,
+    agents_home: str | None,
+    claude_home: str | None,
+    no_verify: bool,
+    json_output: bool,
+) -> None:
+    """Distill your sessions into personal DNA, deploy it locally, and verify readiness."""
+    cfg = load_config()
+    resolved_host = _resolve_onboarding_host(host)
+    if not json_output:
+        click.echo(
+            f"Keep Going will send a scrubbed sample of up to {max_sessions} local sessions "
+            f"to your authenticated {resolved_host} CLI for personal DNA distillation."
+        )
+    try:
+        try:
+            result = onboard_personal_dna(
+                cfg,
+                project=Path(project),
+                host=resolved_host,
+                max_sessions=max_sessions,
+                max_turns=max_turns,
+                window_days=window_days,
+                scope=scope,
+                replace=replace,
+            )
+        except FileExistsError:
+            if not deploy or replace:
+                raise
+            result = _reuse_existing_personal_dna(cfg, resolved_host)
+        deployment = {"enabled": False, "host": resolved_host, "verified": False}
+        if deploy:
+            started = _start_project(
+                cfg=cfg,
+                project=project,
+                host=resolved_host,
+                backend=DEFAULT_BACKEND,
+                command=None,
+                shell=False,
+                input_mode="stdin",
+                force_skill="keep-going",
+                shell_executable=None,
+                state_home=state_home,
+                agents=None,
+                render_mode="block",
+                register_hosts=resolved_host if register_hosts == "auto" else register_hosts,
+                codex_home=codex_home,
+                agents_home=agents_home,
+                claude_home=claude_home,
+                no_verify=no_verify,
+            )
+            state = started["state"]
+            deployment = {
+                "enabled": bool(state.get("enabled")),
+                "host": state.get("host"),
+                "project": state.get("project"),
+                "state_file": state.get("state_file"),
+                "verified": started["self_test"] is not None and bool(started["self_test"].get("passed")),
+            }
+        result["deployment"] = deployment
+        result["next_actions"] = [
+            'Ask your agent: "Should you continue with the next low-risk step within the agreed scope?"',
+            f"Run `$keep-going status` or `npx keep-going status --project {Path(project).resolve(strict=False)}` at any time.",
+        ]
+        _emit_onboarding_result(result, json_output=json_output)
+    except (FileExistsError, FileNotFoundError, RuntimeError, ValueError) as exc:
+        raise click.ClickException(str(exc)) from exc
+
+
+def _resolve_onboarding_host(host: str) -> str:
+    if host != "auto":
+        return host
+    if shutil.which("codex"):
+        return "codex"
+    if shutil.which("claude"):
+        return "claude-code"
+    raise RuntimeError("Neither Codex nor Claude Code CLI was found; install and authenticate one, then retry")
+
+
+def _reuse_existing_personal_dna(cfg: Config, host: str) -> dict[str, object]:
+    source = cfg.paths.artifacts_dir / "decision-policy.yaml"
+    runtime = runtime_policy_path(source)
+    policy = load_runtime_policy(source)
+    evidence = cfg.paths.data_dir / "onboarding" / "latest-selection.json"
+    return {
+        "status": "success",
+        "summary": "Existing personal DNA is valid; skipped distillation and resumed local deployment.",
+        "profile_summary": policy.get("profile_summary") or "Existing personal DNA",
+        "selection": {"sessions": 0, "turns": 0, "scope": "existing", "host": host},
+        "artifacts": {
+            "source_policy": str(source),
+            "runtime_policy": str(runtime),
+            "evidence_bundle": str(evidence) if evidence.exists() else "not available",
+        },
+        "next_actions": [],
+    }
+
+
+def _emit_onboarding_result(result: dict[str, object], *, json_output: bool) -> None:
+    if json_output:
+        click.echo(json.dumps(result, ensure_ascii=False, indent=2))
+        return
+    click.echo("\nPersonal DNA ready")
+    click.echo(f"- {result['summary']}")
+    click.echo(f"- profile: {result['profile_summary']}")
+    selection = result["selection"]
+    click.echo(f"- evidence: {selection['sessions']} sessions / {selection['turns']} decision turns")
+    for name, path in result["artifacts"].items():
+        click.echo(f"- {name}: {path}")
+    deployment = result["deployment"]
+    click.echo(
+        f"- deployment: {'enabled' if deployment['enabled'] else 'not enabled'} "
+        f"(host={deployment['host']}, verified={deployment['verified']})"
+    )
+    click.echo("\nTry it now:")
+    for action in result["next_actions"]:
+        click.echo(f"- {action}")
 
 
 @main.command(name="package")

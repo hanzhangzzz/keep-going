@@ -68,7 +68,13 @@ def run_audit(
         _check_skill(
             "skill_artifact",
             cfg.root / ".codex" / "skills" / "keep-going" / "SKILL.md",
-            required=("scripts/03-reply.sh", "scripts/04-mcp.sh", "keep-going bridge", "--input-json"),
+            required=(
+                "scripts/03-reply.sh",
+                "scripts/04-mcp.sh",
+                "keep-going bridge",
+                "scripts/onboard.sh",
+                "--input-json",
+            ),
         ),
         _check_agent(cfg.root / ".codex" / "agents" / "keep-going.toml"),
         _check_plugin(cfg.root / "plugins" / "keep-going" / ".codex-plugin" / "plugin.json", name="plugin_manifest"),
@@ -77,7 +83,13 @@ def run_audit(
         _check_skill(
             "plugin_skill_artifact",
             cfg.root / "plugins" / "keep-going" / "skills" / "keep-going" / "SKILL.md",
-            required=("scripts/reply.sh", "scripts/mcp.sh", "scripts/bridge.sh", "--input-json"),
+            required=(
+                "scripts/reply.sh",
+                "scripts/mcp.sh",
+                "scripts/bridge.sh",
+                "scripts/onboard.sh",
+                "--input-json",
+            ),
         ),
         _check_plugin_mcp(cfg.root / "plugins" / "keep-going" / ".mcp.json"),
         _check_plugin_hooks(cfg.root / "plugins" / "keep-going" / "hooks.json"),
@@ -90,6 +102,7 @@ def run_audit(
         _check_executable("plugin_reply_wrapper", cfg.root / "plugins" / "keep-going" / "scripts" / "reply.sh"),
         _check_executable("plugin_mcp_wrapper", cfg.root / "plugins" / "keep-going" / "scripts" / "mcp.sh"),
         _check_executable("plugin_bridge_wrapper", cfg.root / "plugins" / "keep-going" / "scripts" / "bridge.sh"),
+        _check_executable("plugin_onboard_wrapper", cfg.root / "plugins" / "keep-going" / "scripts" / "onboard.sh"),
         _check_executable("plugin_hook_wrapper", cfg.root / "plugins" / "keep-going" / "hooks" / "keep-going-decision-hook.sh"),
         _check_executable("plugin_stop_hook_wrapper", cfg.root / "plugins" / "keep-going" / "hooks" / "keep-going-stop-hook.sh"),
         _check_mcp_tool_schema(),

@@ -211,6 +211,7 @@ def test_install_cli_execute_to_temp_codex_home(monkeypatch, tmp_path: Path):
     assert (agents_home / "plugins" / "keep-going" / "hooks" / "keep-going-decision-hook.sh").exists()
     assert (agents_home / "plugins" / "keep-going" / "hooks" / "keep-going-stop-hook.sh").exists()
     assert (agents_home / "plugins" / "keep-going" / "scripts" / "bridge.sh").exists()
+    assert (agents_home / "plugins" / "keep-going" / "scripts" / "onboard.sh").exists()
     commands = _codex_stop_hook_commands(codex_home)
     assert any("KEEP_GOING_HOST=codex" in command and "keep-going-stop-hook.sh" in command for command in commands)
     assert _keep_going_codex_stop_hook(codex_home)["timeout"] == 360
@@ -395,6 +396,16 @@ def test_sync_local_cli_refreshes_runtime_and_installed_surfaces(monkeypatch, tm
     assert (runtime_home / "0.1.0" / "artifacts" / "decision-policy.runtime.yaml").read_bytes() == (
         ROOT / "artifacts" / "decision-policy.runtime.yaml"
     ).read_bytes()
+    expected_user_home = str((runtime_home / "user").resolve())
+    assert (runtime_home / "0.1.0" / "plugins" / "keep-going" / "user-home").read_text(
+        encoding="utf-8"
+    ).strip() == expected_user_home
+    assert (agents_home / "plugins" / "keep-going" / "user-home").read_text(encoding="utf-8").strip() == (
+        expected_user_home
+    )
+    assert (
+        claude_home / "plugins" / "marketplaces" / "keep-going-local" / "plugins" / "keep-going" / "user-home"
+    ).read_text(encoding="utf-8").strip() == expected_user_home
     commands = _codex_stop_hook_commands(codex_home)
     assert any("KEEP_GOING_HOST=codex" in command and "keep-going-stop-hook.sh" in command for command in commands)
     assert _keep_going_codex_stop_hook(codex_home)["timeout"] == 360

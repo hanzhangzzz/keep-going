@@ -38,6 +38,8 @@ def test_private_decision_artifacts_are_rejected_generically() -> None:
     assert path_violations("artifacts/decision-policy.template.yaml") == []
     assert path_violations("artifacts/decision-policy.yaml") == ["private decision policy artifact"]
     assert path_violations("artifacts/decision-private.yaml") == ["private decision policy artifact"]
+    assert path_violations("artifacts/decision-policy.yaml.bak") == ["private decision policy artifact"]
+    assert path_violations("artifacts/.decision-policy.yaml.tmp") == ["private decision policy artifact"]
 
 
 def test_history_audit_accepts_clean_root_and_rejects_private_artifact(tmp_path: Path) -> None:

@@ -16,6 +16,7 @@ PLUGIN_PUBLIC_FILES = (
     ".codex-plugin/plugin.json",
     ".mcp.json",
     "commands/self-test.md",
+    "commands/onboard.md",
     "commands/setup.md",
     "commands/status.md",
     "hooks.json",
@@ -24,6 +25,7 @@ PLUGIN_PUBLIC_FILES = (
     "hooks/keep-going-decision-hook.sh",
     "plugin.json",
     "prompts/keep-going-self-test.md",
+    "prompts/keep-going-onboard.md",
     "prompts/keep-going-setup.md",
     "prompts/keep-going-status.md",
     "prompts/keep-going:self-test.md",
@@ -32,6 +34,7 @@ PLUGIN_PUBLIC_FILES = (
     "prompts/keep-going.md",
     "scripts/bridge.sh",
     "scripts/mcp.sh",
+    "scripts/onboard.sh",
     "scripts/reply.sh",
     "skills/keep-going/SKILL.md",
 )
@@ -104,6 +107,7 @@ def _manifest(out: Path) -> dict[str, object]:
         },
         "activation": {
             "initialize_policy": "copy artifacts/decision-policy.template.yaml to the local ignored decision-policy.yaml, then run keep-going compile-policy",
+            "onboarding": "requires the full npm or source runtime; this review package is not standalone",
             "readiness_check": "uv run keep-going audit --smoke --json-output",
         },
     }

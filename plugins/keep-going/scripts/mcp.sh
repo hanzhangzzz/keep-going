@@ -20,4 +20,7 @@ if [[ ! -x "$repo_root/scripts/04-mcp.sh" ]]; then
   echo "Keep Going MCP wrapper missing or not executable: $repo_root/scripts/04-mcp.sh" >&2
   exit 1
 fi
+if [[ -z "${KEEP_GOING_USER_HOME:-}" && -f "$script_dir/../user-home" ]]; then
+  export KEEP_GOING_USER_HOME="$(cat "$script_dir/../user-home")"
+fi
 exec "$repo_root/scripts/04-mcp.sh" "$@"

@@ -1,13 +1,13 @@
 ---
 name: keep-going
-description: 调用本仓库的 Keep Going；也可通过“开启/关闭/查询/自检”管理当前项目的 Keep Going Stop hook。
+description: 一键蒸馏并部署个人 DNA，调用 Keep Going 做轻量决策，或管理当前项目的 Stop hook。
 ---
 
 # Keep Going Skill
 
 当任务 Agent 卡在「要不要继续、选哪个方案、是否完成、是否提交」这类需要用户轻量判断的问题时，调用本 skill。
 
-当用户通过 `$keep-going` 请求“开启、关闭、查询、状态、自检、start、enable、disable、status、self-test”时，不要把它当成要询问 Keep Going 的问题；直接执行下面的项目级控制命令。
+当用户通过 `$keep-going` 请求“蒸馏我的 DNA、初始化、onboard、开启、关闭、查询、状态、自检”时，不要把它当成要询问 Keep Going 的问题；直接执行对应控制命令。
 
 ## 项目级控制入口
 
@@ -15,6 +15,8 @@ description: 调用本仓库的 Keep Going；也可通过“开启/关闭/查询
 
 意图映射：
 
+- `$keep-going 蒸馏我的 DNA` / `$keep-going 初始化` / `$keep-going onboard`：执行插件本地 `scripts/onboard.sh --project "$PWD" --host <当前宿主>`。Codex 使用 `--host codex`，Claude Code 使用 `--host claude-code`。这一个入口必须完成 session 选择、个人策略蒸馏、runtime 编译、本地安装、项目绑定和自检。
+- `$keep-going 重新蒸馏` / `$keep-going refresh DNA`：同上并追加 `--replace`；执行前提醒现有本地 canonical 会被替换。
 - `$keep-going 开启` / `$keep-going start`：优先执行 npm/CLI 一键入口 `keep-going start --project "$PWD"`；如果当前环境没有 `keep-going` 命令，再执行 `scripts/bridge.sh enable --project "$PWD" --host codex` 并提醒用户 native Stop hook 可能需要先安装。
 - `$keep-going enable`：执行 `scripts/bridge.sh enable --project "$PWD" --host codex`
 - `$keep-going 关闭` / `$keep-going disable`：执行 `scripts/bridge.sh disable --project "$PWD"`
@@ -126,29 +128,31 @@ printf '{"question":"<AI 的问题>","project":"%s","agent":"qa-reviewer"}' "$PW
 - `escalate`：仅适用于 `keep-going reply` / `keep-going hook` 旧接口；为 `true` 时不要代用户继续授权。
 - `prompt`：可交给更强 LLM 继续生成最终回复的 Keep Going system/context 包。
 
-## Distill your own agent [experimental]
+## 一键蒸馏并部署你的个人 DNA
 
-One-click distillation: harvest → classify → deterministic decision policy for a named agent.
+用户不需要理解内部流水线。默认只从当前宿主最近 5 个本地 session 中选择最多 40 条高信号决策，脱敏后交给同一已登录宿主 CLI 蒸馏，并把完整事实源与持久化 runtime 保存在版本无关的本机用户目录。
 
 ```bash
-uv run keep-going distill-mine --name <agent-name>
-uv run keep-going distill-mine --name <agent-name> --project /path/to/project
+scripts/onboard.sh --project "$PWD" --host codex
+# Claude Code 中使用：
+scripts/onboard.sh --project "$PWD" --host claude-code
 ```
 
 **隐私边界（hard requirement）：**
 
-1. 本地 session 只读 — harvest 只读 `~/.claude` 和 `~/.codex`，不写源目录。
-2. 模板 / canonical policy 不被触碰。
-3. 全流程本地处理，不调 Anthropic API。
-4. 产物写到 `~/.keep-going/agents/<name>/policy-<ts>.yaml`，不进 git 跟踪路径。
-5. 无 telemetry、无上传。
+1. 原始 session 只读，不修改 `~/.claude` 和 `~/.codex`。
+2. 只读取当前宿主自己的 session；经过脱敏和有界选择的决策样本只发送给同一已认证宿主 CLI，不走 Keep Going 自建服务，无 telemetry。
+3. 完整 canonical、runtime 和证据包都保存在本机私有、Git ignored 路径，不进入发布包。
+4. 安全、授权和隐私门由公开 baseline 强制合并，模型输出不能删除。
+5. 已存在个人 DNA 时默认拒绝覆盖；只有用户明确要求重新蒸馏才使用 `--replace`。
 
 **约束：**
 
-- agent 名称必须通过 `validate_agent_name`（`default` 等保留名被拒）。
-- 语料不足 10 条 user turn 时抛 `InsufficientCorpusError`。
-- 产物是 `status: candidate` 的 YAML，不自动覆盖 canonical policy。
-- 连续运行产生带历史记录的多个 decision policy 文件（meta.json.history 追加）。
+- 少于 3 条可用决策时显式失败，并提示扩大时间窗或先积累 session。
+- 默认 `--scope recent` 跨项目提炼稳定个人偏好；只想使用当前项目时传 `--scope project`。
+- 完成后必须把 profile 摘要、session/turn 数、canonical/runtime/证据包路径、部署状态和可立即体验的下一步原样告诉用户。
+
+命名专家 agent 仍可使用高级入口 `keep-going distill-mine --name <agent-name>`；它不替代默认 personal DNA onboarding。
 
 ## 边界
 

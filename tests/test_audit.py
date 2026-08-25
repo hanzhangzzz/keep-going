@@ -163,14 +163,21 @@ def _write_minimal_project(root: Path) -> Config:
         "src/keep_going/mcp_stdio.py",
     ]:
         _write(root / path, "ok")
-    _write(root / ".codex/skills/keep-going/SKILL.md", "scripts/03-reply.sh scripts/04-mcp.sh keep-going bridge --input-json")
-    _write(root / "plugins/keep-going/skills/keep-going/SKILL.md", "scripts/reply.sh scripts/mcp.sh scripts/bridge.sh --input-json")
+    _write(
+        root / ".codex/skills/keep-going/SKILL.md",
+        "scripts/03-reply.sh scripts/04-mcp.sh keep-going bridge keep-going onboard --input-json",
+    )
+    _write(
+        root / "plugins/keep-going/skills/keep-going/SKILL.md",
+        "scripts/reply.sh scripts/mcp.sh scripts/bridge.sh scripts/onboard.sh --input-json",
+    )
     for path in [
         "scripts/03-reply.sh",
         "scripts/04-mcp.sh",
         "plugins/keep-going/scripts/reply.sh",
         "plugins/keep-going/scripts/mcp.sh",
         "plugins/keep-going/scripts/bridge.sh",
+        "plugins/keep-going/scripts/onboard.sh",
         "plugins/keep-going/hooks/keep-going-decision-hook.sh",
         "plugins/keep-going/hooks/keep-going-stop-hook.sh",
     ]:
@@ -387,6 +394,7 @@ def test_run_audit_global_install_passes_for_installed_targets(tmp_path: Path):
             agents_home / "plugins" / "keep-going" / "scripts" / "reply.sh",
             agents_home / "plugins" / "keep-going" / "scripts" / "mcp.sh",
             agents_home / "plugins" / "keep-going" / "scripts" / "bridge.sh",
+            agents_home / "plugins" / "keep-going" / "scripts" / "onboard.sh",
             agents_home / "plugins" / "keep-going" / "hooks" / "keep-going-decision-hook.sh",
             agents_home / "plugins" / "keep-going" / "hooks" / "keep-going-stop-hook.sh",
             agents_home / "plugins" / "keep-going" / "hooks" / "hooks.json",
@@ -397,6 +405,7 @@ def test_run_audit_global_install_passes_for_installed_targets(tmp_path: Path):
             claude_home / "plugins" / "marketplaces" / "keep-going-local" / "plugins" / "keep-going" / ".claude-plugin" / "plugin.json",
             claude_home / "plugins" / "marketplaces" / "keep-going-local" / "plugins" / "keep-going" / "hooks" / "keep-going-stop-hook.sh",
             claude_home / "plugins" / "marketplaces" / "keep-going-local" / "plugins" / "keep-going" / "scripts" / "bridge.sh",
+            claude_home / "plugins" / "marketplaces" / "keep-going-local" / "plugins" / "keep-going" / "scripts" / "onboard.sh",
             claude_home / "plugins" / "marketplaces" / "keep-going-local" / "plugins" / "keep-going" / "runtime-root",
         ]:
             _write(path, "ok")
@@ -404,10 +413,12 @@ def test_run_audit_global_install_passes_for_installed_targets(tmp_path: Path):
         agents_home / "plugins" / "keep-going" / "scripts" / "reply.sh",
         agents_home / "plugins" / "keep-going" / "scripts" / "mcp.sh",
         agents_home / "plugins" / "keep-going" / "scripts" / "bridge.sh",
+        agents_home / "plugins" / "keep-going" / "scripts" / "onboard.sh",
         agents_home / "plugins" / "keep-going" / "hooks" / "keep-going-decision-hook.sh",
         agents_home / "plugins" / "keep-going" / "hooks" / "keep-going-stop-hook.sh",
         claude_home / "plugins" / "marketplaces" / "keep-going-local" / "plugins" / "keep-going" / "hooks" / "keep-going-stop-hook.sh",
         claude_home / "plugins" / "marketplaces" / "keep-going-local" / "plugins" / "keep-going" / "scripts" / "bridge.sh",
+        claude_home / "plugins" / "marketplaces" / "keep-going-local" / "plugins" / "keep-going" / "scripts" / "onboard.sh",
     ]:
         path.chmod(0o755)
     (agents_home / "plugins" / "keep-going" / ".repo-root").write_text(str(tmp_path) + "\n", encoding="utf-8")

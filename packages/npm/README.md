@@ -2,19 +2,22 @@
 
 Install or upgrade Keep Going integration surfaces from npm:
 
+Requires Node.js 18+, Python 3.11+, `uv`, and an authenticated Codex or Claude Code CLI.
+
+```sh
+npx keep-going onboard --project "$PWD" --host auto
+```
+
+`onboard` is the default new-user path. It selects a bounded, scrubbed sample from the chosen host's recent local sessions, distills personal decision DNA through that authenticated CLI, persists canonical and runtime policies in a version-independent local user directory, installs the integration, enables the current project, and verifies the Stop hook.
+
+The published package contains only the public decision-policy template. It never contains a maintainer's canonical policy, runtime policy, session data, local configuration, or host paths. Personal DNA is created only on the user's machine.
+
+Lifecycle commands remain available:
+
 ```sh
 npx keep-going sync-local
 npx keep-going install
 npx keep-going upgrade
-```
-
-The published package contains only the public decision-policy template. It never contains a maintainer's canonical policy, runtime policy, session data, local configuration, or host paths. Create and compile a private policy in the installed runtime before using `start`:
-
-```sh
-runtime="$(npx keep-going runtime-path)"
-cp "$runtime/artifacts/decision-policy.template.yaml" "$runtime/artifacts/decision-policy.yaml"
-(cd "$runtime" && uv run keep-going compile-policy)
-npx keep-going start
 ```
 
 `start` installs or refreshes the runtime, registers detected host plugins, installs the Codex native Stop hook, enables the current project with `--host codex`, and runs verification. It fails explicitly when persisted private decision policy has not been initialized.

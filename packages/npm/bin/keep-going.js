@@ -4,7 +4,7 @@
 const childProcess = require("child_process");
 const path = require("path");
 
-const { prepareRuntime, runtimePath } = require("../lib/runtime");
+const { migratePrivateArtifacts, prepareRuntime, runtimePath, userHomeForRuntime } = require("../lib/runtime");
 
 const PACKAGE_ROOT = path.resolve(__dirname, "..");
 const PACKAGE = require("../package.json");
@@ -22,13 +22,18 @@ function main(argv) {
   const runtimeDir = prepareRuntime(PACKAGE_ROOT, PACKAGE.version, parsed.options, {
     replace:
       parsed.command === "upgrade" ||
-      parsed.command === "start" ||
       parsed.command === "sync-local" ||
       parsed.options.replaceRuntime,
   });
+  if (!process.env.KEEP_GOING_USER_HOME) {
+    process.env.KEEP_GOING_USER_HOME = userHomeForRuntime(runtimeDir);
+  }
   console.log(`Keep Going runtime: ${runtimeDir}`);
 
   const sourceDir = parsed.options.source ? path.resolve(parsed.options.source) : null;
+  if (sourceDir) {
+    migratePrivateArtifacts(sourceDir, process.env.KEEP_GOING_USER_HOME);
+  }
   if (sourceDir && parsed.command === "sync-local") {
     return syncLocal(sourceDir, parsed.options);
   }
@@ -50,6 +55,8 @@ function main(argv) {
       return install(runtimeDir, parsed.options, { upgrade: true });
     case "start":
       return start(runtimeDir, parsed.options);
+    case "onboard":
+      return onboard(runtimeDir, parsed.options);
     case "sync-local":
       return syncLocal(runtimeDir, parsed.options);
     case "doctor":
@@ -96,6 +103,31 @@ function start(runtimeDir, options) {
   appendOption(args, "--render-mode", options.renderMode);
   if (options.shell) {
     args.push("--shell");
+  }
+  if (options.noVerify) {
+    args.push("--no-verify");
+  }
+  if (options.jsonOutput) {
+    args.push("--json-output");
+  }
+  return runKeepGoing(runtimeDir, args);
+}
+
+function onboard(runtimeDir, options) {
+  const args = ["onboard", "--project", options.project || process.cwd()];
+  appendOption(args, "--host", options.host || "auto");
+  appendOption(args, "--max-sessions", options.maxSessions);
+  appendOption(args, "--max-turns", options.maxTurns);
+  appendOption(args, "--window-days", options.windowDays);
+  appendOption(args, "--scope", options.scope);
+  appendOption(args, "--register-hosts", options.registerHosts);
+  appendOption(args, "--state-home", options.stateHome);
+  appendHomeArgs(args, options);
+  if (options.replace) {
+    args.push("--replace");
+  }
+  if (options.noDeploy) {
+    args.push("--no-deploy");
   }
   if (options.noVerify) {
     args.push("--no-verify");
@@ -175,7 +207,10 @@ function runKeepGoing(runtimeDir, args) {
   requireUv();
   const result = childProcess.spawnSync("uv", ["run", "keep-going", ...args], {
     cwd: runtimeDir,
-    env: process.env,
+    env: {
+      ...process.env,
+      KEEP_GOING_USER_HOME: userHomeForRuntime(runtimeDir),
+    },
     stdio: "inherit",
   });
   if (result.error) {
@@ -301,6 +336,24 @@ function parseArgs(argv) {
           throw new Error("--render-mode must be advisory or block");
         }
         break;
+      case "--max-sessions":
+        options.maxSessions = readValue(flag, args);
+        break;
+      case "--max-turns":
+        options.maxTurns = readValue(flag, args);
+        break;
+      case "--window-days":
+        options.windowDays = readValue(flag, args);
+        break;
+      case "--scope":
+        options.scope = readValue(flag, args);
+        break;
+      case "--replace":
+        options.replace = true;
+        break;
+      case "--no-deploy":
+        options.noDeploy = true;
+        break;
       case "--json-output":
         options.jsonOutput = true;
         break;
@@ -323,6 +376,9 @@ function printHelp() {
 Keep Going npm installer
 
 Usage:
+  npx keep-going onboard [--project <dir>] [--host auto|codex|claude-code]
+    [--max-sessions 5] [--max-turns 40] [--window-days 90] [--scope recent|project]
+    [--replace] [--no-deploy]
   npx keep-going sync-local [--source <repo>] [--register-hosts auto|all|claude-code|codex|none]
   npx keep-going start [--project <dir>] [--host codex|claude-code|generic] [--register-hosts auto|all|claude-code|codex|none]
   npx keep-going install [--dry-run] [--force] [--register-hosts auto|all|claude-code|codex|none] [--source <repo>]

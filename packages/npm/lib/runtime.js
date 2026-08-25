@@ -19,6 +19,7 @@ const PUBLIC_RUNTIME_FILES = new Set([
   "plugins/keep-going/.codex-plugin/plugin.json",
   "plugins/keep-going/.mcp.json",
   "plugins/keep-going/commands/self-test.md",
+  "plugins/keep-going/commands/onboard.md",
   "plugins/keep-going/commands/setup.md",
   "plugins/keep-going/commands/status.md",
   "plugins/keep-going/hooks.json",
@@ -27,6 +28,7 @@ const PUBLIC_RUNTIME_FILES = new Set([
   "plugins/keep-going/hooks/keep-going-decision-hook.sh",
   "plugins/keep-going/plugin.json",
   "plugins/keep-going/prompts/keep-going-self-test.md",
+  "plugins/keep-going/prompts/keep-going-onboard.md",
   "plugins/keep-going/prompts/keep-going-setup.md",
   "plugins/keep-going/prompts/keep-going-status.md",
   "plugins/keep-going/prompts/keep-going:self-test.md",
@@ -35,6 +37,7 @@ const PUBLIC_RUNTIME_FILES = new Set([
   "plugins/keep-going/prompts/keep-going.md",
   "plugins/keep-going/scripts/bridge.sh",
   "plugins/keep-going/scripts/mcp.sh",
+  "plugins/keep-going/scripts/onboard.sh",
   "plugins/keep-going/scripts/reply.sh",
   "plugins/keep-going/skills/keep-going/SKILL.md",
   "pyproject.toml",
@@ -70,6 +73,7 @@ const PUBLIC_RUNTIME_FILES = new Set([
   "src/keep_going/integration/package.py",
   "src/keep_going/integration/stop_context.py",
   "src/keep_going/mcp_stdio.py",
+  "src/keep_going/onboarding.py",
   "src/keep_going/patterns/__init__.py",
   "src/keep_going/patterns/distill.py",
   "src/keep_going/privacy.py",
@@ -131,16 +135,18 @@ function prepareRuntime(packageRoot, version, options = {}, prepareOptions = {})
   const source = findRuntimeSource(packageRoot, options);
   assertRuntimeSource(source);
   const target = runtimePath(options, version);
+  const userHome = userHomeForRuntime(target);
+  migratePrivateRuntimeState(path.dirname(target), userHome);
   if (samePath(source, target)) {
-    writeRuntimeRootMarker(target);
+    writeRuntimeRootMarker(target, userHome);
     return target;
   }
   if (fs.existsSync(path.join(target, "pyproject.toml")) && !prepareOptions.replace) {
-    writeRuntimeRootMarker(target);
+    writeRuntimeRootMarker(target, userHome);
     return target;
   }
   copyRuntimeSource(source, target, { replace: true });
-  writeRuntimeRootMarker(target);
+  writeRuntimeRootMarker(target, userHome);
   return target;
 }
 
@@ -180,7 +186,7 @@ function copyRuntimeSource(source, target, options = {}) {
   }
 }
 
-function writeRuntimeRootMarker(runtimeRoot) {
+function writeRuntimeRootMarker(runtimeRoot, userHome = userHomeForRuntime(runtimeRoot)) {
   const root = path.resolve(runtimeRoot);
   const pluginRoot = path.join(root, "plugins", "keep-going");
   if (!fs.existsSync(pluginRoot)) {
@@ -188,6 +194,65 @@ function writeRuntimeRootMarker(runtimeRoot) {
   }
   fs.writeFileSync(path.join(pluginRoot, "runtime-root"), `${root}\n`, "utf8");
   fs.writeFileSync(path.join(pluginRoot, ".repo-root"), `${root}\n`, "utf8");
+  fs.writeFileSync(path.join(pluginRoot, "user-home"), `${path.resolve(userHome)}\n`, "utf8");
+}
+
+function userHomeForRuntime(runtimeRoot) {
+  const override = String(process.env.KEEP_GOING_USER_HOME || "").trim();
+  return path.resolve(override || path.join(path.dirname(path.resolve(runtimeRoot)), "user"));
+}
+
+function migratePrivateRuntimeState(runtimeHome, userHome) {
+  const home = path.resolve(userHome);
+  fs.mkdirSync(home, { recursive: true, mode: 0o700 });
+  fs.chmodSync(home, 0o700);
+  if (!fs.existsSync(runtimeHome)) {
+    return;
+  }
+  const versions = fs
+    .readdirSync(runtimeHome, { withFileTypes: true })
+    .filter((entry) => entry.isDirectory() && path.resolve(runtimeHome, entry.name) !== home)
+    .map((entry) => path.join(runtimeHome, entry.name))
+    .sort((left, right) => fs.statSync(right).mtimeMs - fs.statSync(left).mtimeMs);
+  for (const versionRoot of versions) {
+    migratePrivateArtifacts(versionRoot, home);
+  }
+}
+
+function migratePrivateArtifacts(versionRoot, userHome) {
+  const sourceArtifacts = path.join(versionRoot, "artifacts");
+  const targetArtifacts = path.join(userHome, "artifacts");
+  if (fs.existsSync(sourceArtifacts)) {
+    fs.mkdirSync(targetArtifacts, { recursive: true, mode: 0o700 });
+    fs.chmodSync(targetArtifacts, 0o700);
+    for (const name of fs.readdirSync(sourceArtifacts)) {
+      if (!name.startsWith("decision-policy") || name === "decision-policy.template.yaml") {
+        continue;
+      }
+      const source = path.join(sourceArtifacts, name);
+      const target = path.join(targetArtifacts, name);
+      if (fs.statSync(source).isFile() && !fs.existsSync(target)) {
+        fs.copyFileSync(source, target);
+        fs.chmodSync(target, 0o600);
+      }
+    }
+  }
+  const sourceData = path.join(versionRoot, "data");
+  const targetData = path.join(userHome, "data");
+  if (fs.existsSync(sourceData) && !fs.existsSync(targetData)) {
+    fs.cpSync(sourceData, targetData, { recursive: true });
+    chmodPrivateTree(targetData);
+  }
+}
+
+function chmodPrivateTree(root) {
+  const stat = fs.statSync(root);
+  fs.chmodSync(root, stat.isDirectory() ? 0o700 : 0o600);
+  if (stat.isDirectory()) {
+    for (const name of fs.readdirSync(root)) {
+      chmodPrivateTree(path.join(root, name));
+    }
+  }
 }
 
 function assertRuntimeSource(source) {
@@ -330,8 +395,10 @@ module.exports = {
   copyRuntimeSource,
   defaultRuntimeHome,
   findRuntimeSource,
+  migratePrivateArtifacts,
   prepareRuntime,
   runtimePath,
   shouldCopy,
+  userHomeForRuntime,
   writeRuntimeRootMarker,
 };

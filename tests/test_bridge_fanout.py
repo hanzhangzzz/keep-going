@@ -306,6 +306,20 @@ def test_resolve_unknown_agent_falls_back_to_default_runtime(tmp_path: Path):
     assert policy_path == cfg.paths.artifacts_dir / "decision-policy.runtime.yaml"
 
 
+def test_resolve_existing_project_agent_returns_its_policy(tmp_path: Path):
+    cfg = _config(tmp_path)
+    agent_dir = tmp_path / ".keep-going" / "agents" / "my-dna"
+    agent_dir.mkdir(parents=True)
+    policy_path = agent_dir / "policy-20260716T000000000Z.yaml"
+    policy_path.write_text("version: 0.5\n", encoding="utf-8")
+    (agent_dir / "meta.json").write_text(
+        json.dumps({"name": "my-dna", "current_policy": str(policy_path)}),
+        encoding="utf-8",
+    )
+
+    assert _resolve_agent_policy("my-dna", tmp_path, cfg) == policy_path
+
+
 # ── loop guard ───────────────────────────────────────────────────────────────
 
 def test_stop_hook_active_without_context_hands_back_to_human(tmp_path: Path):

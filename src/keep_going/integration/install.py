@@ -94,6 +94,7 @@ def sync_local_install(
     """Refresh the local runtime copy and installed host integration from this checkout."""
     if register_hosts not in HOST_PLUGIN_CHOICES:
         raise ValueError(f"--register-hosts must be one of: {', '.join(HOST_PLUGIN_CHOICES)}")
+    user_home = _user_home_for_runtime(runtime_home)
     output = sync_local_runtime(cfg, runtime_home=runtime_home, runtime_version=runtime_version)
     output += run_installer(
         cfg,
@@ -103,6 +104,12 @@ def sync_local_install(
         execute=True,
         force=True,
         register_hosts=register_hosts,
+    )
+    output += _write_installed_user_home_markers(
+        user_home,
+        codex_home=codex_home,
+        agents_home=agents_home,
+        claude_home=claude_home,
     )
     report = None
     if verify:
@@ -117,7 +124,8 @@ def sync_local_runtime(
     runtime_version: str | None = None,
 ) -> str:
     version = runtime_version or _runtime_version(cfg.root)
-    target = (runtime_home or Path(os.environ.get("KEEP_GOING_RUNTIME_HOME", Path.home() / ".keep-going" / "runtime"))) / version
+    user_home = _user_home_for_runtime(runtime_home)
+    target = _runtime_home(runtime_home) / version
     npm_package_root = (cfg.root / "packages" / "npm").resolve()
     resolved_target = target.resolve()
     if resolved_target == npm_package_root or resolved_target.is_relative_to(npm_package_root):
@@ -162,6 +170,7 @@ def sync_local_runtime(
         marker = f"{target.resolve()}\n"
         (plugin_root / "runtime-root").write_text(marker, encoding="utf-8")
         (plugin_root / ".repo-root").write_text(marker, encoding="utf-8")
+        (plugin_root / "user-home").write_text(f"{user_home}\n", encoding="utf-8")
     installed_runtime = target / "artifacts" / runtime_policy.name
     if not installed_runtime.is_file():
         raise RuntimeError(f"synced runtime decision policy missing: {installed_runtime}")
@@ -172,6 +181,45 @@ def sync_local_runtime(
         )
     lines.append(f"- runtime_copy: {result.stdout.strip()}")
     lines.append(f"- installed_runtime_sha256: {installed_sha}")
+    return "\n".join(lines) + "\n"
+
+
+def _runtime_home(runtime_home: Path | None = None) -> Path:
+    return Path(runtime_home or os.environ.get("KEEP_GOING_RUNTIME_HOME", Path.home() / ".keep-going" / "runtime"))
+
+
+def _user_home_for_runtime(runtime_home: Path | None = None) -> Path:
+    override = os.environ.get("KEEP_GOING_USER_HOME", "").strip()
+    return Path(override).expanduser().resolve() if override else (_runtime_home(runtime_home) / "user").resolve()
+
+
+def _write_installed_user_home_markers(
+    user_home: Path,
+    *,
+    codex_home: Path | None = None,
+    agents_home: Path | None = None,
+    claude_home: Path | None = None,
+) -> str:
+    _, agents_target, claude_target = resolve_target_homes(
+        codex_home=codex_home,
+        agents_home=agents_home,
+        claude_home=claude_home,
+    )
+    user_home.mkdir(parents=True, exist_ok=True, mode=0o700)
+    user_home.chmod(0o700)
+    plugin_roots = (
+        agents_target / "plugins" / "keep-going",
+        claude_target / "plugins" / "marketplaces" / "keep-going-local" / "plugins" / "keep-going",
+    )
+    written: list[Path] = []
+    for plugin_root in plugin_roots:
+        if not plugin_root.is_dir():
+            continue
+        marker = plugin_root / "user-home"
+        marker.write_text(f"{user_home}\n", encoding="utf-8")
+        written.append(marker)
+    lines = ["Keep Going private user home", f"- user_home: {user_home}"]
+    lines.extend(f"- marker: {marker}" for marker in written)
     return "\n".join(lines) + "\n"
 
 
@@ -483,6 +531,7 @@ def verify_installation(
         ("plugin_reply_wrapper", plugin_root / "scripts" / "reply.sh"),
         ("plugin_mcp_wrapper", plugin_root / "scripts" / "mcp.sh"),
         ("plugin_bridge_wrapper", plugin_root / "scripts" / "bridge.sh"),
+        ("plugin_onboard_wrapper", plugin_root / "scripts" / "onboard.sh"),
         ("plugin_hook", plugin_root / "hooks" / "keep-going-decision-hook.sh"),
         ("plugin_stop_hook", plugin_root / "hooks" / "keep-going-stop-hook.sh"),
         ("plugin_claude_hooks", plugin_root / "hooks" / "hooks.json"),
@@ -493,6 +542,7 @@ def verify_installation(
         ("claude_plugin_manifest", claude_plugin_root / ".claude-plugin" / "plugin.json"),
         ("claude_plugin_stop_hook", claude_plugin_root / "hooks" / "keep-going-stop-hook.sh"),
         ("claude_plugin_bridge_wrapper", claude_plugin_root / "scripts" / "bridge.sh"),
+        ("claude_plugin_onboard_wrapper", claude_plugin_root / "scripts" / "onboard.sh"),
         ("claude_plugin_runtime_root", claude_plugin_root / "runtime-root"),
     ]
     rendered = [
@@ -527,10 +577,12 @@ def _verify_path(name: str, path: Path) -> dict[str, str]:
         "plugin_reply_wrapper",
         "plugin_mcp_wrapper",
         "plugin_bridge_wrapper",
+        "plugin_onboard_wrapper",
         "plugin_hook",
         "plugin_stop_hook",
         "claude_plugin_stop_hook",
         "claude_plugin_bridge_wrapper",
+        "claude_plugin_onboard_wrapper",
     } and not os.access(path, os.X_OK):
         return {"name": name, "path": str(path), "status": "NOT_EXECUTABLE"}
     return {"name": name, "path": str(path), "status": "PASS"}

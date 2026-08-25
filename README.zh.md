@@ -10,6 +10,29 @@ Keep Going 是面向 Claude Code 和 Codex 的策略驱动型 Stop-hook harness�
 
 > 这是概念交互模型，不是实测性能数据。图中的横轴表示标准化任务进度，不表示实际耗时。Keep Going 不声称具体减少了多少次人类介入，也不声称缩短了完成时间或提高了成功率。
 
+## 一条命令获得你的个人 DNA
+
+环境要求：通过 `npx` 使用时需要 Node.js 18+；两种入口都需要 Python 3.11+、[`uv`](https://docs.astral.sh/uv/)，以及已登录的 Claude Code 或 Codex CLI。npm wrapper 会用 `uv` 运行随包提供的 Python runtime。
+
+从源码仓库使用：
+
+```bash
+uv sync
+uv run keep-going onboard --project "$PWD" --host auto
+```
+
+或者使用已打包的 CLI：
+
+```bash
+npx keep-going onboard --project "$PWD" --host auto
+```
+
+这一条命令只会从所选宿主自己的近期 session 中选择有界的决策样本，先做脱敏，再通过该已登录宿主 CLI 蒸馏稳定的个人决策偏好；随后把可 review 的 canonical 与编译后 runtime 持久化到不随程序版本变化的本机用户目录，安装调用面、启用当前项目并运行 Stop-hook 自检。
+
+完成输出会直接展示你的画像摘要、采用了多少个 session 和决策、全部本地产物路径、部署状态，以及一个可以马上体验的问题。之后可以运行 `$keep-going 状态` 或 `npx keep-going status --project "$PWD"` 查看当前真正加载的策略。
+
+只有所选宿主自身 session 中经过选择和脱敏的有界样本会发送给该后端；不会读取另一个宿主的 session。原始 session 始终只读并保留在本机。已有个人 DNA 默认不会被覆盖，只有明确追加 `--replace` 才会重新蒸馏。
+
 ## Keep Going 做什么
 
 Keep Going 位于宿主的 Stop hook。它不接管 Agent 的规划器、任务状态、检查点、权限系统或完成标准。
@@ -57,16 +80,13 @@ Keep Going 不会绕过 Claude Code 或 Codex 的权限机制。宿主的权限�
 
 runtime 策略是本地 canonical 策略经过确定性编译后的持久化产物。runtime 缺失、过期或被人工修改时会显式失败；Keep Going 不会临时投影，也不会静默回退。
 
-## 从源码开始使用
+## 手工配置与高级控制
 
 要求：Python 3.11+、[`uv`](https://docs.astral.sh/uv/)，以及已完成身份认证的 Claude Code 或 Codex CLI，用于模型驱动的 Stop 决策。
 
 ```bash
 uv sync
-cp artifacts/decision-policy.template.yaml artifacts/decision-policy.yaml
-# 编译前先 review 并定制这份保守的本地策略。
-uv run keep-going compile-policy
-uv run keep-going bridge self-test --project "$PWD" --json-output
+uv run keep-going onboard --project "$PWD" --host auto
 ```
 
 安装或刷新宿主集成，启用项目级 Stop hook，并验证实际加载面：
@@ -79,7 +99,7 @@ uv run keep-going bridge self-test --project "$PWD" --json-output
 
 `keep-going start` 会写入用户级 agent、plugin、marketplace、原生 hook 集成和项目状态。在源码工作流中，当前 checkout 仍是实际运行时。如果暂时不希望执行这些用户级写入，请先运行 `uv run keep-going install` 查看安装计划。
 
-源码工作流也可以选择采集并蒸馏本地对话：
+如果要研究 deterministic baseline 或手工开发策略，仍可使用底层流水线：
 
 ```bash
 uv run keep-going harvest --window-days 90
@@ -106,6 +126,7 @@ npm --prefix packages/npm test
 ## 集成入口
 
 - `keep-going bridge`：启用项目级 Stop hook 并执行自检
+- `keep-going onboard`：有界 session 蒸馏、个人 DNA 持久化、本地部署与验证
 - `keep-going reply`：直接使用决策策略回答问题
 - `keep-going hook`：宿主无关的 hook 策略入口
 - `keep-going mcp`：MCP stdio server

@@ -93,6 +93,8 @@ def test_package_keep_going_exports_manifest_and_integration_surfaces(tmp_path: 
         if path.is_file()
     )
     assert manifest["entrypoints"]["bridge"] == "plugins/keep-going/scripts/bridge.sh"
+    assert "onboard" not in manifest["entrypoints"]
+    assert "not standalone" in manifest["activation"]["onboarding"]
     assert "initialize_policy" in manifest["activation"]
 
 

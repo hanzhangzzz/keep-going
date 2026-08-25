@@ -69,8 +69,13 @@ def decide_stop(
     if policy_path is None:
         policy_path = runtime_policy_path(cfg.paths.artifacts_dir / "decision-policy.yaml")
     policy_path = Path(policy_path).expanduser()
+    policy = load_decision_policy(policy_path)
+    rules = _stop_decision_rules(policy)
 
     if backend == "cli":
+        explicit = _decide_from_matching_rule(message=_event_message(event), rules=rules, policy_path=policy_path)
+        if explicit is not None and explicit.get("category") in STOP_CATEGORIES:
+            return normalize_stop_decision(explicit, fallback_reason="explicit_stop_decision_rule")
         return _decide_with_cli(
             cfg,
             event,
@@ -85,10 +90,8 @@ def decide_stop(
     if backend != "direct":
         raise ValueError(f"unsupported Stop decision backend: {backend}")
 
-    policy = load_decision_policy(policy_path)
     message = _event_message(event)
     context = _event_context(event)
-    rules = _stop_decision_rules(policy)
 
     if generate:
         prompt = build_stop_decision_prompt(
@@ -291,6 +294,7 @@ def _external_cli_prompt(
             "第二步·判断与输出。只输出一个 JSON 对象，不要输出 Markdown 或额外解释。",
             'JSON schema: {"action": "allow|block|escalate", "reply": string, "reason": string, "confidence": number, "evidence": array, "category": "preference|verification|authorization|capability|information|other"}',
             "语义：allow=结束本次 Stop；block=把 reply 注入上游 agent 继续执行；escalate=需要真人，不能代答。",
+            "关键不变量：allow 只在任务可安全结束时使用；如果无需真人决策但仍有明确未完成工作，也必须 block，reply 直接要求继续完成。",
             "校准优先于代答率：confidence 必须反映真实把握，宁可 escalate 也不要高置信答错；confidence 低于 0.6 时不要 block。",
             "不要把 decision_policy 当作机械规则表逐条匹配；你要按用户画像、偏好、边界和当前上下文综合判断。",
             "先识别 decision policy ai_collaboration_modes 中的当前协作模式：co-explorer（用户在探讨想法）时不要替用户催执行，探讨类问题交回真人；executor（方案已对齐）时才放手代答推进。",
@@ -359,18 +363,13 @@ def build_stop_decision_prompt(
 
 
 def _decide_from_rules(message: str, rules: list[dict[str, Any]], *, policy_path: Path) -> dict[str, Any]:
-    conditional: list[dict[str, Any]] = []
+    explicit = _decide_from_matching_rule(message=message, rules=rules, policy_path=policy_path)
+    if explicit is not None:
+        return explicit
     defaults: list[dict[str, Any]] = []
     for rule in rules:
-        if _has_condition(rule):
-            conditional.append(rule)
-        else:
+        if not _has_condition(rule):
             defaults.append(rule)
-
-    for rule in conditional:
-        matched = _match_rule(rule, message)
-        if matched:
-            return _rule_decision(rule, policy_path=policy_path, matched=matched)
 
     if defaults:
         return _rule_decision(defaults[0], policy_path=policy_path, matched=["default"])
@@ -387,6 +386,18 @@ def _decide_from_rules(message: str, rules: list[dict[str, Any]], *, policy_path
             }
         ],
     }
+
+
+def _decide_from_matching_rule(
+    *, message: str, rules: list[dict[str, Any]], policy_path: Path
+) -> dict[str, Any] | None:
+    for rule in rules:
+        if not _has_condition(rule):
+            continue
+        matched = _match_rule(rule, message)
+        if matched:
+            return _rule_decision(rule, policy_path=policy_path, matched=matched)
+    return None
 
 
 def _stop_decision_rules(policy: dict[str, Any]) -> list[dict[str, Any]]:

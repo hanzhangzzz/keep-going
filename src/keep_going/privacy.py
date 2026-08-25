@@ -8,7 +8,7 @@ from pathlib import Path
 
 
 PRIVATE_ARTIFACT_RE = re.compile(
-    r"^artifacts/decision-(?!policy\.template\.yaml$)[^/]+\.ya?ml$"
+    r"^artifacts/(?:\.)?decision-(?!policy\.template\.yaml$)[^/]+\.ya?ml(?:\.(?:bak|tmp))?$"
 )
 EMAIL_RE = re.compile(rb"[A-Za-z0-9._%+-]+@([A-Za-z0-9.-]+\.[A-Za-z]{2,})")
 HOME_PATH_RE = re.compile(
