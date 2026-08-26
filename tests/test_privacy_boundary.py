@@ -153,6 +153,27 @@ def test_history_audit_rejects_sensitive_commit_message(tmp_path: Path) -> None:
     assert "commit message: absolute user-home path" in result.stdout
 
 
+def test_history_audit_accepts_agent_coauthor_trailer(tmp_path: Path) -> None:
+    repo, env = _clean_repo(tmp_path)
+    message = "feat: something\n\nCo-Authored-By: Claude <noreply" + "@anthropic.com>"
+    subprocess.run(["git", "commit", "--allow-empty", "-q", "-m", message], cwd=repo, check=True, env=env)
+
+    result = _audit(repo, env, "--history")
+
+    assert result.returncode == 0, result.stdout
+
+
+def test_history_audit_still_rejects_real_anthropic_address(tmp_path: Path) -> None:
+    repo, env = _clean_repo(tmp_path)
+    message = "feat: something\n\nCo-Authored-By: Someone <person" + "@anthropic.com>"
+    subprocess.run(["git", "commit", "--allow-empty", "-q", "-m", message], cwd=repo, check=True, env=env)
+
+    result = _audit(repo, env, "--history")
+
+    assert result.returncode != 0
+    assert "commit message: non-placeholder email address" in result.stdout
+
+
 def _clean_repo(tmp_path: Path) -> tuple[Path, dict[str, str]]:
     repo = tmp_path / "repo"
     repo.mkdir()

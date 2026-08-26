@@ -15,7 +15,11 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 20
-      - run: git fetch origin '+refs/pull/*/head:refs/remotes/pull/*'
+      # actions/checkout already creates refs/remotes/pull/<n>/merge on a
+      # pull_request event, so mapping the head into refs/remotes/pull/<n>
+      # collides with that directory and aborts the fetch. Use a namespace
+      # of our own; the audit walks --all either way.
+      - run: git fetch origin '+refs/pull/*/head:refs/remotes/pullhead/*'
       - run: uv run python scripts/privacy-audit.py --history
       - run: uv run pytest tests/test_privacy_boundary.py tests/test_npm_package.py tests/test_package.py -q
       - run: npm --prefix packages/npm test

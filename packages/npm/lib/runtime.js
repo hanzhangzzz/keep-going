@@ -103,6 +103,11 @@ const SAFE_EMAIL_DOMAINS = new Set([
   "example.org",
   "users.noreply.github.com",
 ]);
+// Coding agents append a Co-Authored-By trailer carrying this public no-reply
+// address. It identifies no person, so allow the exact address rather than the
+// whole anthropic.com domain, which would also let real staff mail through.
+// Mirrors SAFE_EMAIL_ADDRESSES in src/keep_going/privacy.py.
+const SAFE_EMAIL_ADDRESSES = new Set(["noreply@anthropic.com"]);
 const REVIEWED_MEDIA_SHA256 = new Map([
   ["docs/assets/keep-going-concept.svg", "2e76241a2e5221f3b7548b7d7e4bcb01d94efa6866a485c12fe409aeae40caa7"],
 ]);
@@ -356,7 +361,9 @@ function contentViolations(data) {
     violations.push("absolute user-home path");
   }
   const emailPattern = /[A-Za-z0-9._%+-]+@([A-Za-z0-9.-]+\.[A-Za-z]{2,})/g;
-  const domains = [...text.matchAll(emailPattern)].map((match) => match[1].toLowerCase());
+  const domains = [...text.matchAll(emailPattern)]
+    .filter((match) => !SAFE_EMAIL_ADDRESSES.has(match[0].toLowerCase()))
+    .map((match) => match[1].toLowerCase());
   if (domains.some((domain) => !SAFE_EMAIL_DOMAINS.has(domain))) {
     violations.push("non-placeholder email address");
   }

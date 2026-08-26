@@ -24,6 +24,10 @@ FORBIDDEN_NAMES = {"claude.log", "save.txt"}
 FORBIDDEN_PREFIXES = (".omx/", ".serena/", "data/")
 FORBIDDEN_PATHS = {".claude/settings.local.json"}
 SAFE_EMAIL_DOMAINS = {"example.com", "example.net", "example.org", "users.noreply.github.com"}
+# Coding agents append a Co-Authored-By trailer carrying this public no-reply
+# address. It identifies no person, so allow the exact address rather than the
+# whole anthropic.com domain, which would also let real staff mail through.
+SAFE_EMAIL_ADDRESSES = {"noreply@anthropic.com"}
 SECRET_PATTERNS = (
     re.compile(rb"-" * 5 + rb"BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY" + rb"-" * 5),
     re.compile(
@@ -98,7 +102,11 @@ def content_violations(data: bytes) -> list[str]:
         violations.append("binary/media content")
     if HOME_PATH_RE.search(data):
         violations.append("absolute user-home path")
-    domains = {match.group(1).decode("ascii", errors="ignore").lower() for match in EMAIL_RE.finditer(data)}
+    domains = {
+        match.group(1).decode("ascii", errors="ignore").lower()
+        for match in EMAIL_RE.finditer(data)
+        if match.group(0).decode("ascii", errors="ignore").lower() not in SAFE_EMAIL_ADDRESSES
+    }
     if domains - SAFE_EMAIL_DOMAINS:
         violations.append("non-placeholder email address")
     if any(pattern.search(data) for pattern in SECRET_PATTERNS):
