@@ -471,6 +471,11 @@ def test_npm_start_and_onboard_preserve_existing_personal_policy(tmp_path: Path)
             "onboard",
             *common,
             "--no-deploy",
+            # Pin the host so onboarding does not probe PATH for an agent CLI.
+            # Without it this asserts nothing on a machine that has none: the
+            # command fails at host resolution instead of at the guard below.
+            "--host",
+            "codex",
         ],
         cwd=ROOT,
         text=True,
