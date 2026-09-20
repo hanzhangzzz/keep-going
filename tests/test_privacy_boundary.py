@@ -6,6 +6,8 @@ import subprocess
 import sys
 from pathlib import Path
 
+import pytest
+
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -161,6 +163,74 @@ def test_history_audit_accepts_agent_coauthor_trailer(tmp_path: Path) -> None:
     result = _audit(repo, env, "--history")
 
     assert result.returncode == 0, result.stdout
+
+
+def test_history_audit_accepts_github_merge_committer_only(tmp_path: Path) -> None:
+    repo, env = _clean_repo(tmp_path)
+    feature = "feature"
+    subprocess.run(["git", "switch", "-c", feature], cwd=repo, check=True, env=env)
+    (repo / "feature.txt").write_text("feature\n", encoding="utf-8")
+    subprocess.run(["git", "add", "feature.txt"], cwd=repo, check=True)
+    subprocess.run(["git", "commit", "-q", "-m", "feature"], cwd=repo, check=True, env=env)
+    subprocess.run(["git", "switch", "-q", "-"], cwd=repo, check=True, env=env)
+    (repo / "main.txt").write_text("main\n", encoding="utf-8")
+    subprocess.run(["git", "add", "main.txt"], cwd=repo, check=True)
+    subprocess.run(["git", "commit", "-q", "-m", "main"], cwd=repo, check=True, env=env)
+    merge_env = {**env, "GIT_COMMITTER_EMAIL": "noreply" + "@github.com"}
+    subprocess.run(["git", "merge", "--no-ff", "-q", feature, "-m", "Merge pull request #1"], cwd=repo, check=True, env=merge_env)
+
+    result = _audit(repo, env, "--history")
+
+    assert result.returncode == 0, result.stdout
+
+
+def test_history_audit_rejects_non_allowlisted_github_committer(tmp_path: Path) -> None:
+    repo, env = _clean_repo(tmp_path)
+    merge_env = {**env, "GIT_COMMITTER_EMAIL": "automation" + "@github.com"}
+    subprocess.run(["git", "commit", "--allow-empty", "-q", "-m", "automation"], cwd=repo, check=True, env=merge_env)
+
+    result = _audit(repo, env, "--history")
+
+    assert result.returncode != 0
+    assert "private committer email" in result.stdout
+
+
+def test_history_audit_rejects_private_committer_email(tmp_path: Path) -> None:
+    repo, env = _clean_repo(tmp_path)
+    private_env = {**env, "GIT_COMMITTER_EMAIL": "person" + "@example.com"}
+    subprocess.run(["git", "commit", "--allow-empty", "-q", "-m", "private"], cwd=repo, check=True, env=private_env)
+
+    result = _audit(repo, env, "--history")
+
+    assert result.returncode != 0
+    assert "private committer email" in result.stdout
+
+
+@pytest.mark.parametrize(
+    ("path", "content", "allowed"),
+    [
+        ("tests/test_privacy_boundary.py", "automation" + "@github.com", True),
+        ("README.md", "automation" + "@github.com", False),
+        ("tests/test_privacy_boundary.py", "aliceautomation" + "@github.com", False),
+        ("tests/test_privacy_boundary.py", "automation" + "@github.com.evil", False),
+        ("tests/test_privacy_boundary.py", "person" + "@private.invalid", False),
+        ("tests/test_privacy_boundary.py", "automation" + "@github.com person" + "@private.invalid", False),
+    ],
+)
+def test_synthetic_email_exception_requires_exact_path_and_value(
+    tmp_path: Path, path: str, content: str, allowed: bool,
+) -> None:
+    repo, env = _clean_repo(tmp_path)
+    target = repo / path
+    target.parent.mkdir(parents=True, exist_ok=True)
+    target.write_text(content + "\n", encoding="utf-8")
+    subprocess.run(["git", "add", path], cwd=repo, check=True)
+
+    result = _audit(repo, env)
+
+    assert (result.returncode == 0) == allowed, result.stdout
+    if not allowed:
+        assert "non-placeholder email address" in result.stdout
 
 
 def test_history_audit_still_rejects_real_anthropic_address(tmp_path: Path) -> None:
