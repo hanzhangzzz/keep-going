@@ -373,20 +373,20 @@ function readValue(flag, args) {
 
 function printHelp() {
   const text = `
-Keep Going npm installer
+Keep Going local CLI wrapper
 
 Usage:
-  npx keep-going onboard [--project <dir>] [--host auto|codex|claude-code]
+  node packages/npm/bin/keep-going.js onboard [--project <dir>] [--host auto|codex|claude-code]
     [--max-sessions 5] [--max-turns 40] [--window-days 90] [--scope recent|project]
     [--replace] [--no-deploy]
-  npx keep-going sync-local [--source <repo>] [--register-hosts auto|all|claude-code|codex|none]
-  npx keep-going start [--project <dir>] [--host codex|claude-code|generic] [--register-hosts auto|all|claude-code|codex|none]
-  npx keep-going install [--dry-run] [--force] [--register-hosts auto|all|claude-code|codex|none] [--source <repo>]
-  npx keep-going upgrade [--source <repo>] [--replace-runtime] [--register-hosts auto|all|claude-code|codex|none]
-  npx keep-going doctor [--verify-install]
-  npx keep-going enable --project <dir> [--backend direct|cli] [--command "c 0"] [--shell]
-  npx keep-going disable --project <dir>
-  npx keep-going status --project <dir>
+  node packages/npm/bin/keep-going.js sync-local [--source <repo>] [--register-hosts auto|all|claude-code|codex|none]
+  node packages/npm/bin/keep-going.js start [--project <dir>] [--host codex|claude-code|generic] [--register-hosts auto|all|claude-code|codex|none]
+  node packages/npm/bin/keep-going.js install [--dry-run] [--force] [--register-hosts auto|all|claude-code|codex|none] [--source <repo>]
+  node packages/npm/bin/keep-going.js upgrade [--source <repo>] [--replace-runtime] [--register-hosts auto|all|claude-code|codex|none]
+  node packages/npm/bin/keep-going.js doctor [--verify-install]
+  node packages/npm/bin/keep-going.js enable --project <dir> [--backend direct|cli] [--command "c 0"] [--shell]
+  node packages/npm/bin/keep-going.js disable --project <dir>
+  node packages/npm/bin/keep-going.js status --project <dir>
 
 Note:
   Claude Code plugin commands are available as slash commands.

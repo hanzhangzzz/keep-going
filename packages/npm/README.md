@@ -1,23 +1,40 @@
-# Keep Going npm CLI
+# Keep Going local CLI wrapper
 
-Install or upgrade Keep Going integration surfaces from npm:
+The `keep-going` package is not published to the npm registry. Do not use
+`npx keep-going` or `npm install keep-going`; those registry paths return 404.
+This directory is a local wrapper used from a cloned Keep Going checkout and
+for package build checks. The repository's supported user entrypoint is the
+Python CLI described in the root README.
 
-Requires Node.js 18+, Python 3.11+, `uv`, and an authenticated Codex or Claude Code CLI.
+From the repository root, use the source CLI:
 
 ```sh
-npx keep-going onboard --project "$PWD" --host auto
+uv sync
+uv run keep-going onboard --project "$PWD" --host auto
+uv run keep-going status --project "$PWD"
 ```
+
+For local wrapper development, run the checked-in script directly:
+
+```sh
+node packages/npm/bin/keep-going.js --help
+node packages/npm/bin/keep-going.js install --source . --dry-run
+node packages/npm/bin/keep-going.js sync-local --source . --no-register-hosts
+```
+
+Requires Node.js 18+, Python 3.11+, `uv`, and an authenticated Codex or
+Claude Code CLI when running model-backed commands.
 
 `onboard` is the default new-user path. It selects a bounded, scrubbed sample from the chosen host's recent local sessions, distills personal decision DNA through that authenticated CLI, persists canonical and runtime policies in a version-independent local user directory, installs the integration, enables the current project, and verifies the Stop hook.
 
-The published package contains only the public decision-policy template. It never contains a maintainer's canonical policy, runtime policy, session data, local configuration, or host paths. Personal DNA is created only on the user's machine.
+The local runtime bundle contains only the public decision-policy template. It never contains a maintainer's canonical policy, runtime policy, session data, local configuration, or host paths. Personal DNA is created only on the user's machine.
 
 Lifecycle commands remain available:
 
 ```sh
-npx keep-going sync-local
-npx keep-going install
-npx keep-going upgrade
+node packages/npm/bin/keep-going.js sync-local
+node packages/npm/bin/keep-going.js install
+node packages/npm/bin/keep-going.js upgrade
 ```
 
 `start` installs or refreshes the runtime, registers detected host plugins, installs the Codex native Stop hook, enables the current project with `--host codex`, and runs verification. It fails explicitly when persisted private decision policy has not been initialized.
@@ -36,20 +53,13 @@ codex plugin add keep-going@keep-going-local
 Use `--register-hosts claude-code|codex|all|auto|none` or `--no-register-hosts` to control registration.
 
 Claude Code exposes the plugin commands as slash commands, for example `/keep-going:setup --enable`.
-Current Codex CLI releases do not dispatch plugin or user-installed custom slash commands in the TUI; use `$keep-going`, MCP, or the npm control commands instead:
+Current Codex CLI releases do not dispatch plugin or user-installed custom slash commands in the TUI; use `$keep-going`, MCP, or the local wrapper commands instead:
 
 ```sh
-npx keep-going start --project "$PWD"
-npx keep-going enable --project "$PWD" --host codex
-npx keep-going status --project "$PWD"
-npx keep-going disable --project "$PWD"
-```
-
-For local development, point the wrapper at a checkout:
-
-```sh
-node packages/npm/bin/keep-going.js install --source . --dry-run
-node packages/npm/bin/keep-going.js sync-local --source . --no-register-hosts
+node packages/npm/bin/keep-going.js start --project "$PWD"
+node packages/npm/bin/keep-going.js enable --project "$PWD" --host codex
+node packages/npm/bin/keep-going.js status --project "$PWD"
+node packages/npm/bin/keep-going.js disable --project "$PWD"
 ```
 
 The wrapper copies the Keep Going Python runtime into `~/.keep-going/runtime/<version>` and then runs the repo-local `uv run keep-going ...` commands from that stable runtime path. Use `upgrade` to replace an existing install, or `install --force` when you intentionally want reinstall semantics.
