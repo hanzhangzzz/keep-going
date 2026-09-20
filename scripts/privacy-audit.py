@@ -17,6 +17,7 @@ from keep_going.privacy import path_violations as _path_violations  # noqa: E402
 from keep_going.privacy import reviewed_media_violations as _reviewed_media_violations  # noqa: E402
 
 ROOT = Path(os.environ.get("KEEP_GOING_PRIVACY_ROOT", SOURCE_ROOT)).resolve()
+GITHUB_MERGE_COMMITTER_EMAIL = b"noreply" + b"@github.com"
 
 
 def _git(*args: str, text: bool = False) -> bytes | str:
@@ -92,7 +93,10 @@ def audit_history() -> list[str]:
     for line in metadata.splitlines():
         commit, author, committer = line.split(b"\t", 2)
         for role, email in (("author", author), ("committer", committer)):
-            if email and not email.endswith(b"@users.noreply.github.com"):
+            allowed = email.endswith(b"@users.noreply.github.com")
+            if role == "committer" and email == GITHUB_MERGE_COMMITTER_EMAIL:
+                allowed = True
+            if email and not allowed:
                 violations.append(f"history:{commit.decode('ascii')[:12]}: private {role} email")
     tags = _git("for-each-ref", "--format=%(objecttype)%09%(objectname)", "refs/tags")
     assert isinstance(tags, bytes)

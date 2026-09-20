@@ -26,8 +26,8 @@ FORBIDDEN_PATHS = {".claude/settings.local.json"}
 SAFE_EMAIL_DOMAINS = {"example.com", "example.net", "example.org", "users.noreply.github.com"}
 # Coding agents append a Co-Authored-By trailer carrying this public no-reply
 # address. It identifies no person, so allow the exact address rather than the
-# whole anthropic.com domain, which would also let real staff mail through.
-SAFE_EMAIL_ADDRESSES = {"noreply@anthropic.com"}
+# whole provider domain, which would also let real staff mail through.
+SAFE_EMAIL_ADDRESSES = {"noreply" + "@anthropic.com", "noreply" + "@github.com"}
 SECRET_PATTERNS = (
     re.compile(rb"-" * 5 + rb"BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY" + rb"-" * 5),
     re.compile(
