@@ -163,6 +163,47 @@ def test_history_audit_accepts_agent_coauthor_trailer(tmp_path: Path) -> None:
     assert result.returncode == 0, result.stdout
 
 
+def test_history_audit_accepts_github_merge_committer_only(tmp_path: Path) -> None:
+    repo, env = _clean_repo(tmp_path)
+    feature = "feature"
+    subprocess.run(["git", "switch", "-c", feature], cwd=repo, check=True, env=env)
+    (repo / "feature.txt").write_text("feature\n", encoding="utf-8")
+    subprocess.run(["git", "add", "feature.txt"], cwd=repo, check=True)
+    subprocess.run(["git", "commit", "-q", "-m", "feature"], cwd=repo, check=True, env=env)
+    subprocess.run(["git", "switch", "-q", "-"], cwd=repo, check=True, env=env)
+    (repo / "main.txt").write_text("main\n", encoding="utf-8")
+    subprocess.run(["git", "add", "main.txt"], cwd=repo, check=True)
+    subprocess.run(["git", "commit", "-q", "-m", "main"], cwd=repo, check=True, env=env)
+    merge_env = {**env, "GIT_COMMITTER_EMAIL": "noreply@github.com"}
+    subprocess.run(["git", "merge", "--no-ff", "-q", feature, "-m", "Merge pull request #1"], cwd=repo, check=True, env=merge_env)
+
+    result = _audit(repo, env, "--history")
+
+    assert result.returncode == 0, result.stdout
+
+
+def test_history_audit_rejects_non_allowlisted_github_committer(tmp_path: Path) -> None:
+    repo, env = _clean_repo(tmp_path)
+    merge_env = {**env, "GIT_COMMITTER_EMAIL": "automation@github.com"}
+    subprocess.run(["git", "commit", "--allow-empty", "-q", "-m", "automation"], cwd=repo, check=True, env=merge_env)
+
+    result = _audit(repo, env, "--history")
+
+    assert result.returncode != 0
+    assert "private committer email" in result.stdout
+
+
+def test_history_audit_rejects_private_committer_email(tmp_path: Path) -> None:
+    repo, env = _clean_repo(tmp_path)
+    private_env = {**env, "GIT_COMMITTER_EMAIL": "person@example.com"}
+    subprocess.run(["git", "commit", "--allow-empty", "-q", "-m", "private"], cwd=repo, check=True, env=private_env)
+
+    result = _audit(repo, env, "--history")
+
+    assert result.returncode != 0
+    assert "private committer email" in result.stdout
+
+
 def test_history_audit_still_rejects_real_anthropic_address(tmp_path: Path) -> None:
     repo, env = _clean_repo(tmp_path)
     message = "feat: something\n\nCo-Authored-By: Someone <person" + "@anthropic.com>"
