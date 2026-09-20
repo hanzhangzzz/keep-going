@@ -12,24 +12,24 @@ Keep Going is a policy-driven Stop-hook harness for Claude Code and Codex. At ea
 
 ## Get your personal DNA in one command
 
-Requirements: Node.js 18+ for `npx`, Python 3.11+, [`uv`](https://docs.astral.sh/uv/), and an authenticated Claude Code or Codex CLI. The npm wrapper uses `uv` to run the bundled Python runtime.
+The supported distribution path is a local checkout. The `keep-going` package is not published to the npm registry, so `npx keep-going ...` is not a valid installation command. Requirements are Python 3.11+, [`uv`](https://docs.astral.sh/uv/), and an authenticated Claude Code or Codex CLI.
 
-From a cloned repository:
+Clone the repository and run from its root:
 
 ```bash
+git clone https://github.com/hanzhangzzz/keep-going.git
+cd keep-going
 uv sync
-uv run keep-going onboard --project "$PWD" --host auto
+uv run keep-going onboard --project /path/to/your-project --host auto
 ```
 
-Or from the packaged CLI:
+Replace `/path/to/your-project` with the actual project you want to enable. That single command selects a bounded sample from the chosen host's recent sessions, scrubs it, distills recurring decision preferences through your authenticated host CLI, persists a reviewable canonical policy and compiled runtime in a version-independent local user directory, installs the local integration, enables the target project, and runs a Stop-hook self-test.
+
+The final output shows your profile summary, the number of sessions and decisions used, every local artifact path, deployment status, and a first question to try. Run `$keep-going status` or the local command below later to see which policy is active.
 
 ```bash
-npx keep-going onboard --project "$PWD" --host auto
+uv run keep-going status --project /path/to/your-project
 ```
-
-That single command selects a bounded sample from the chosen host's recent sessions, scrubs it, distills recurring decision preferences through your authenticated host CLI, persists a reviewable canonical policy and compiled runtime in a version-independent local user directory, installs the local integration, enables the current project, and runs a Stop-hook self-test.
-
-The final output shows your profile summary, the number of sessions and decisions used, every local artifact path, deployment status, and a first question to try. Run `$keep-going status` or `npx keep-going status --project "$PWD"` later to see which policy is active.
 
 Only the selected scrubbed sample from the chosen host is sent to that authenticated backend; sessions from the other host are not read. Raw session files remain read-only and local. Existing personal DNA is never overwritten unless you explicitly rerun with `--replace`.
 
@@ -82,19 +82,25 @@ The runtime policy is a persisted, deterministic compilation of the local canoni
 
 ## Manual setup and advanced controls
 
-Requirements: Python 3.11+, [`uv`](https://docs.astral.sh/uv/), and an authenticated Claude Code or Codex CLI for model-backed Stop decisions.
+Requirements: Python 3.11+, [`uv`](https://docs.astral.sh/uv/), and an authenticated Claude Code or Codex CLI for model-backed Stop decisions. Run all commands from the cloned repository root.
 
 ```bash
 uv sync
-uv run keep-going onboard --project "$PWD" --host auto
+uv run keep-going onboard --project /path/to/your-project --host auto
+```
+
+The repository also contains a local Node.js wrapper for development and packaging checks. It is not an npm registry installation:
+
+```bash
+node packages/npm/bin/keep-going.js onboard --source "$PWD" --project /path/to/your-project --host auto
 ```
 
 Install or refresh the host integration, enable the project Stop hook, and verify the loaded surface:
 
 ```bash
-uv run keep-going start --project "$PWD" --host codex
-uv run keep-going bridge status --project "$PWD" --json-output
-uv run keep-going bridge self-test --project "$PWD" --json-output
+uv run keep-going start --project /path/to/your-project --host codex
+uv run keep-going bridge status --project /path/to/your-project --json-output
+uv run keep-going bridge self-test --project /path/to/your-project --json-output
 ```
 
 `keep-going start` writes user-level agent, plugin, marketplace, native-hook integration, and project state. In this source workflow, the checkout remains the active runtime. Review the installation plan with `uv run keep-going install` first if you do not want those user-level writes yet.

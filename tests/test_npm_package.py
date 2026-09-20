@@ -57,10 +57,10 @@ def test_npm_wrapper_help_and_syntax_check():
         capture_output=True,
     )
 
-    assert "npx keep-going install" in help_result.stdout
-    assert "npx keep-going onboard" in help_result.stdout
-    assert "npx keep-going start" in help_result.stdout
-    assert "npx keep-going sync-local" in help_result.stdout
+    assert "node packages/npm/bin/keep-going.js install" in help_result.stdout
+    assert "node packages/npm/bin/keep-going.js onboard" in help_result.stdout
+    assert "node packages/npm/bin/keep-going.js start" in help_result.stdout
+    assert "node packages/npm/bin/keep-going.js sync-local" in help_result.stdout
     assert "--register-hosts <mode>" in help_result.stdout
 
     subprocess.run(["npm", "--prefix", str(NPM_ROOT), "test"], cwd=ROOT, check=True)

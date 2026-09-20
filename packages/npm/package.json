@@ -28,7 +28,6 @@
     "stop-hook",
     "codex",
     "claude-code",
-    "agent",
-    "npx"
+    "agent"
   ]
 }
