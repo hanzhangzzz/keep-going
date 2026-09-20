@@ -20,18 +20,16 @@ Keep Going 是面向 Claude Code 和 Codex 的策略驱动型 Stop-hook harness�
 git clone https://github.com/hanzhangzzz/keep-going.git
 cd keep-going
 uv sync
-uv run keep-going onboard --project "$PWD" --host auto
+uv run keep-going onboard --project /path/to/your-project --host auto
 ```
 
-之后查看当前加载的策略：
+请将 `/path/to/your-project` 替换为你实际要启用的项目路径。这一条命令只会从所选宿主自己的近期 session 中选择有界的决策样本，先做脱敏，再通过该已登录宿主 CLI 蒸馏稳定的个人决策偏好；随后把可 review 的 canonical 与编译后 runtime 持久化到不随程序版本变化的本机用户目录，安装调用面、启用目标项目并运行 Stop-hook 自检。
+
+完成输出会直接展示你的画像摘要、采用了多少个 session 和决策、全部本地产物路径、部署状态，以及一个可以马上体验的问题。之后可以运行 `$keep-going 状态` 或下面的本地命令查看当前真正加载的策略。
 
 ```bash
-uv run keep-going status --project "$PWD"
+uv run keep-going status --project /path/to/your-project
 ```
-
-这一条命令只会从所选宿主自己的近期 session 中选择有界的决策样本，先做脱敏，再通过该已登录宿主 CLI 蒸馏稳定的个人决策偏好；随后把可 review 的 canonical 与编译后 runtime 持久化到不随程序版本变化的本机用户目录，安装调用面、启用当前项目并运行 Stop-hook 自检。
-
-完成输出会直接展示你的画像摘要、采用了多少个 session 和决策、全部本地产物路径、部署状态，以及一个可以马上体验的问题。之后可以运行 `$keep-going 状态` 或本地的 `uv run keep-going status --project "$PWD"` 查看当前真正加载的策略。
 
 只有所选宿主自身 session 中经过选择和脱敏的有界样本会发送给该后端；不会读取另一个宿主的 session。原始 session 始终只读并保留在本机。已有个人 DNA 默认不会被覆盖，只有明确追加 `--replace` 才会重新蒸馏。
 
@@ -88,21 +86,21 @@ runtime 策略是本地 canonical 策略经过确定性编译后的持久化产�
 
 ```bash
 uv sync
-uv run keep-going onboard --project "$PWD" --host auto
+uv run keep-going onboard --project /path/to/your-project --host auto
 ```
 
 仓库还包含一个供本地开发和打包检查使用的 Node.js wrapper；它不是 npm registry 安装入口：
 
 ```bash
-node packages/npm/bin/keep-going.js onboard --source "$PWD" --project "$PWD" --host auto
+node packages/npm/bin/keep-going.js onboard --source "$PWD" --project /path/to/your-project --host auto
 ```
 
 安装或刷新宿主集成，启用项目级 Stop hook，并验证实际加载面：
 
 ```bash
-uv run keep-going start --project "$PWD" --host codex
-uv run keep-going bridge status --project "$PWD" --json-output
-uv run keep-going bridge self-test --project "$PWD" --json-output
+uv run keep-going start --project /path/to/your-project --host codex
+uv run keep-going bridge status --project /path/to/your-project --json-output
+uv run keep-going bridge self-test --project /path/to/your-project --json-output
 ```
 
 `keep-going start` 会写入用户级 agent、plugin、marketplace、原生 hook 集成和项目状态。在源码工作流中，当前 checkout 仍是实际运行时。如果暂时不希望执行这些用户级写入，请先运行 `uv run keep-going install` 查看安装计划。

@@ -3,7 +3,6 @@
   "version": "0.1.0",
   "description": "Stop-hook harness for Claude Code and Codex",
   "license": "UNLICENSED",
-  "private": true,
   "type": "commonjs",
   "bin": {
     "keep-going": "bin/keep-going.js"
@@ -21,6 +20,9 @@
   },
   "engines": {
     "node": ">=18"
+  },
+  "publishConfig": {
+    "access": "public"
   },
   "keywords": [
     "stop-hook",

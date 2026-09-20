@@ -10,8 +10,8 @@ From the repository root, use the source CLI:
 
 ```sh
 uv sync
-uv run keep-going onboard --project "$PWD" --host auto
-uv run keep-going status --project "$PWD"
+uv run keep-going onboard --project /path/to/your-project --host auto
+uv run keep-going status --project /path/to/your-project
 ```
 
 For local wrapper development, run the checked-in script directly:
@@ -19,7 +19,7 @@ For local wrapper development, run the checked-in script directly:
 ```sh
 node packages/npm/bin/keep-going.js --help
 node packages/npm/bin/keep-going.js install --source . --dry-run
-node packages/npm/bin/keep-going.js sync-local --source . --no-register-hosts
+node packages/npm/bin/keep-going.js sync-local --source "$PWD" --no-register-hosts
 ```
 
 Requires Node.js 18+, Python 3.11+, `uv`, and an authenticated Codex or
@@ -32,9 +32,9 @@ The local runtime bundle contains only the public decision-policy template. It n
 Lifecycle commands remain available:
 
 ```sh
-node packages/npm/bin/keep-going.js sync-local
-node packages/npm/bin/keep-going.js install
-node packages/npm/bin/keep-going.js upgrade
+node packages/npm/bin/keep-going.js sync-local --source "$PWD" --no-register-hosts
+node packages/npm/bin/keep-going.js install --source "$PWD" --no-register-hosts
+node packages/npm/bin/keep-going.js upgrade --source "$PWD" --no-register-hosts
 ```
 
 `start` installs or refreshes the runtime, registers detected host plugins, installs the Codex native Stop hook, enables the current project with `--host codex`, and runs verification. It fails explicitly when persisted private decision policy has not been initialized.
@@ -56,10 +56,10 @@ Claude Code exposes the plugin commands as slash commands, for example `/keep-go
 Current Codex CLI releases do not dispatch plugin or user-installed custom slash commands in the TUI; use `$keep-going`, MCP, or the local wrapper commands instead:
 
 ```sh
-node packages/npm/bin/keep-going.js start --project "$PWD"
-node packages/npm/bin/keep-going.js enable --project "$PWD" --host codex
-node packages/npm/bin/keep-going.js status --project "$PWD"
-node packages/npm/bin/keep-going.js disable --project "$PWD"
+node packages/npm/bin/keep-going.js start --source "$PWD" --project /path/to/your-project --no-register-hosts
+node packages/npm/bin/keep-going.js enable --project /path/to/your-project --host codex
+node packages/npm/bin/keep-going.js status --project /path/to/your-project
+node packages/npm/bin/keep-going.js disable --project /path/to/your-project
 ```
 
 The wrapper copies the Keep Going Python runtime into `~/.keep-going/runtime/<version>` and then runs the repo-local `uv run keep-going ...` commands from that stable runtime path. Use `upgrade` to replace an existing install, or `install --force` when you intentionally want reinstall semantics.

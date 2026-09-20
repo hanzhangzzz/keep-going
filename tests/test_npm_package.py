@@ -38,13 +38,12 @@ def _keep_going_codex_stop_hook(codex_home: Path) -> dict[str, object]:
     raise AssertionError("missing Keep Going Codex Stop hook")
 
 
-def test_npm_package_metadata_is_local_only():
+def test_npm_package_metadata_is_publishable():
     package = json.loads((NPM_ROOT / "package.json").read_text(encoding="utf-8"))
 
     assert package["name"] == "keep-going"
     assert package["bin"] == {"keep-going": "bin/keep-going.js"}
-    assert package["private"] is True
-    assert "publishConfig" not in package
+    assert package["publishConfig"]["access"] == "public"
     assert "runtime/" in package["files"]
     assert "prepack" in package["scripts"]
 
